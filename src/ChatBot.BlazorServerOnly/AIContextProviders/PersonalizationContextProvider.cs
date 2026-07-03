@@ -35,7 +35,8 @@ internal class PersonalizationContextProvider(AIAgent memoryExtractorAgent, stri
 
         personalization ??= new UserPersonalization
         {
-            Memories = []
+            Memories = [],
+            McpServers = []
         };
 
         ChatMessage lastMessageFromUser = context.RequestMessages.Last();

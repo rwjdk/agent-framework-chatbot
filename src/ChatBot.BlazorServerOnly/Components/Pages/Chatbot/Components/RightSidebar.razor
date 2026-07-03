@@ -17,4 +17,75 @@
         <textarea @bind="_customInstructions" style="min-height: 100px"></textarea>
         <input type="button" value="Save" @onclick="SaveCustomInstructions"/>
     </label>
+    <button class="option-action-button" type="button" @onclick="ShowMcpServers">MCP Servers</button>
+
+    @if (_showMcpServers)
+    {
+        <div class="mcp-dialog-backdrop">
+            <section class="mcp-dialog" role="dialog" aria-modal="true" aria-labelledby="mcp-dialog-title">
+                <header class="mcp-dialog-header">
+                    <h3 id="mcp-dialog-title">MCP Servers</h3>
+                    <button class="mcp-icon-button" type="button" title="Close" @onclick="HideMcpServers">x</button>
+                </header>
+
+                @if (!string.IsNullOrWhiteSpace(_mcpValidationMessage))
+                {
+                    <p class="mcp-validation">@_mcpValidationMessage</p>
+                }
+
+                <div class="mcp-server-list">
+                    @if (_mcpServers.Count == 0)
+                    {
+                        <p class="mcp-empty">No MCP servers configured.</p>
+                    }
+
+                    @for (int serverIndex = 0; serverIndex < _mcpServers.Count; serverIndex++)
+                    {
+                        int currentServerIndex = serverIndex;
+                        McpServerEditor server = _mcpServers[currentServerIndex];
+                        <section class="mcp-server-editor">
+                            <div class="mcp-server-editor-header">
+                                <h4>Server @(currentServerIndex + 1)</h4>
+                                <button class="mcp-remove-button" type="button" @onclick="() => RemoveMcpServer(currentServerIndex)">Remove</button>
+                            </div>
+                            <label class="option-field">
+                                <span>Name</span>
+                                <input class="option-input" @bind="server.Name" />
+                            </label>
+                            <label class="option-field">
+                                <span>URL</span>
+                                <input class="option-input" @bind="server.Url" />
+                            </label>
+
+                            <div class="mcp-headers">
+                                <div class="mcp-headers-title">
+                                    <span>Headers</span>
+                                    <button class="mcp-secondary-button" type="button" @onclick="() => AddHeader(currentServerIndex)">Add Header</button>
+                                </div>
+
+                                @for (int headerIndex = 0; headerIndex < server.Headers.Count; headerIndex++)
+                                {
+                                    int currentHeaderIndex = headerIndex;
+                                    McpHeaderEditor header = server.Headers[currentHeaderIndex];
+                                    <div class="mcp-header-row">
+                                        <input class="option-input" placeholder="Key" @bind="header.Key" />
+                                        <input class="option-input" placeholder="Value" @bind="header.Value" />
+                                        <button class="mcp-icon-button" type="button" title="Remove header" @onclick="() => RemoveHeader(currentServerIndex, currentHeaderIndex)">x</button>
+                                    </div>
+                                }
+                            </div>
+                        </section>
+                    }
+                </div>
+
+                <footer class="mcp-dialog-actions">
+                    <button class="mcp-secondary-button" type="button" @onclick="AddMcpServer">Add Server</button>
+                    <div class="mcp-dialog-action-group">
+                        <button class="mcp-secondary-button" type="button" @onclick="HideMcpServers">Cancel</button>
+                        <button class="mcp-primary-button" type="button" @onclick="SaveMcpServers">Save</button>
+                    </div>
+                </footer>
+            </section>
+        </div>
+    }
 </aside>

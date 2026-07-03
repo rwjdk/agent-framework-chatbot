@@ -1,4 +1,5 @@
 using AgentFrameworkToolkit.AzureOpenAI;
+using AgentFrameworkToolkit.Tools;
 using AgentFrameworkToolkit.Tools.Common;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -31,6 +32,9 @@ public static class Extensions
         {
             builder.Services.AddAzureOpenAIAgentFactory(azureOpenAIEndpoint, azureOpenAIKey);
         }
+
+        //Tools Factory (MCP)
+        builder.Services.AddAIToolFactory();
 
         //Open Weather Map Setup
         string? weatherServiceKey = builder.Configuration[SecretKeys.WeatherServiceKey];

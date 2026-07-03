@@ -15,12 +15,15 @@ using Microsoft.Extensions.AI;
 using Microsoft.JSInterop;
 using OpenAI.Audio;
 using System.ClientModel;
+using AgentFrameworkToolkit.Tools;
+using AgentFrameworkToolkit.Tools.ModelContextProtocol;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot;
 
 [UsedImplicitly]
 public partial class ChatbotPage(
     AzureOpenAIAgentFactory azureOpenAIAgentFactory,
+    AIToolsFactory aiToolsFactory,
     ConversationsService conversationsService,
     FileUploadStorageService fileUploadStorageService,
     ConversationChatMessageMapper conversationChatMessageMapper,
@@ -53,7 +56,7 @@ public partial class ChatbotPage(
     //Components
     private Components.LeftSidebar? _leftSidebar;
     private bool _inImageGenerationMode;
-     private IJSObjectReference? _audioRecorderModule;
+    private IJSObjectReference? _audioRecorderModule;
 
     protected override async Task OnInitializedAsync()
     {
@@ -145,13 +148,25 @@ public partial class ChatbotPage(
             Instructions = "Look at the user's message and extract any user-facts that we do not already know about the user. Facts are names, places, likes, dislikes, or anything the user prefix with 'Remember this' (or non if there aren't any memories to store)"
         });
 
+        List<AITool> tools =
+        [
+            WeatherTools.GetWeatherForCity(openWeatherMapOptions),
+            AIFunctionFactory.Create(imageGenerationTool.GenerateImageAsync, "generate_image")
+        ];
+
+        List<McpClientTools> mcpClientToolsList = await AddMcpToolsAsync();
+        foreach (McpClientTools mcpClientTools in mcpClientToolsList)
+        {
+            tools.AddRange(mcpClientTools.Tools);
+        }
+
         AzureOpenAIAgent agent = azureOpenAIAgentFactory.CreateAgent(new AgentOptions
         {
             ClientType = ClientType.ResponsesApi,
             Model = OpenAIChatModels.Gpt5Mini,
             ReasoningEffort = OpenAIReasoningEffort.Medium,
             ReasoningSummaryVerbosity = OpenAIReasoningSummaryVerbosity.Detailed,
-            Tools = [WeatherTools.GetWeatherForCity(openWeatherMapOptions), AIFunctionFactory.Create(imageGenerationTool.GenerateImageAsync, "generate_image")],
+            Tools = tools,
             Instructions = "You are a chatbot answering questions",
             AIContextProviders = [new PersonalizationContextProvider(memoryExtractorAgent, _userId, userPersonalizationService, MemoryUpdateNotificationAsync)]
         });
@@ -164,6 +179,26 @@ public partial class ChatbotPage(
         {
             await GenerateStreamingResponseAsync(agent);
         }
+
+        //MCP Tools Cleanup
+        foreach (McpClientTools mcpClientTools in mcpClientToolsList)
+        {
+            await mcpClientTools.McpClient.DisposeAsync();
+        }
+    }
+
+    private async Task<List<McpClientTools>> AddMcpToolsAsync()
+    {
+        List<McpClientTools> mcpTools = [];
+        UserPersonalization? userPersonalization = userPersonalizationService.GetPersonalization(_userId);
+        if (userPersonalization != null)
+        {
+            foreach (McpServer mcpServer in userPersonalization.McpServers)
+            {
+                mcpTools.Add(await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers));
+            }
+        }
+        return mcpTools;
     }
 
     private async Task MemoryUpdateNotificationAsync(MemoryUpdate obj)
@@ -280,7 +315,7 @@ public partial class ChatbotPage(
                 {
                     IJSStreamReference audioStreamReference = await _audioRecorderModule.InvokeAsync<IJSStreamReference>("getRecordedAudioStream");
                     await using Stream audioStream = await audioStreamReference.OpenReadStreamAsync();
-                    
+
                     AzureOpenAIClient client = azureOpenAIAgentFactory.Connection.GetClient();
                     AudioClient audioClient = client.GetAudioClient("gpt-4o-mini-transcribe");
 
@@ -303,7 +338,7 @@ public partial class ChatbotPage(
             }
         }
     }
-    
+
     private async Task<List<ConversationAttachment>> SavePendingFilesAsync()
     {
         List<ConversationAttachment> attachments = [];

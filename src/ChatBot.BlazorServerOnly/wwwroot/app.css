@@ -438,3 +438,155 @@ h1:focus {
     color: #111827;
     font: inherit;
 }
+
+.option-input {
+    min-height: 36px;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 0 10px;
+    background: #ffffff;
+    color: #111827;
+    font: inherit;
+}
+
+.option-action-button {
+    width: 100%;
+    min-height: 40px;
+    margin-top: 16px;
+    border: 0;
+    border-radius: 8px;
+    padding: 0 14px;
+    background: #111827;
+    color: #ffffff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mcp-dialog-backdrop {
+    position: fixed;
+    z-index: 20;
+    inset: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+    background: rgba(17, 24, 39, 0.32);
+}
+
+.mcp-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: min(560px, 100%);
+    box-sizing: border-box;
+    overflow: hidden;
+    border-left: 1px solid #d1d5db;
+    padding: 20px;
+    background: #ffffff;
+    color: #111827;
+    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.18);
+}
+
+.mcp-dialog-header,
+.mcp-server-editor-header,
+.mcp-headers-title,
+.mcp-dialog-actions,
+.mcp-dialog-action-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mcp-dialog-header h3,
+.mcp-server-editor-header h4 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+.mcp-server-editor-header h4 {
+    font-size: 14px;
+}
+
+.mcp-server-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.mcp-server-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    background: #f8fafc;
+}
+
+.mcp-headers {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.mcp-headers-title {
+    color: #374151;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.mcp-header-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
+    gap: 8px;
+}
+
+.mcp-icon-button,
+.mcp-remove-button,
+.mcp-secondary-button,
+.mcp-primary-button {
+    min-height: 36px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 0 12px;
+    background: #ffffff;
+    color: #374151;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mcp-icon-button {
+    width: 36px;
+    padding: 0;
+}
+
+.mcp-remove-button {
+    color: #991b1b;
+}
+
+.mcp-primary-button {
+    border-color: #111827;
+    background: #111827;
+    color: #ffffff;
+}
+
+.mcp-validation {
+    margin: 0;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
+.mcp-empty {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+}
