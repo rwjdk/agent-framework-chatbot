@@ -1,26 +1,37 @@
 using ChatBot.BlazorServerOnly.Models;
 using ChatBot.BlazorServerOnly.Services;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 
-public partial class RightSidebar(UserPersonalizationService userPersonalizationService)
+[UsedImplicitly]
+public partial class SettingsDialog(UserPersonalizationService userPersonalizationService, ISnackbar snackbar)
 {
     private string? _customInstructions;
     private List<McpServerEditor> _mcpServers = [];
-    private bool _showMcpServers;
     private string? _loadedUserId;
     private string? _mcpValidationMessage;
+    private SettingsSection _selectedSection = SettingsSection.Chat;
 
-    [Parameter,EditorRequired] public required string UserId { get; set; }
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
 
-    [Parameter, EditorRequired] public bool Streaming { get; set; }
+    [Parameter, EditorRequired]
+    public required string UserId { get; set; }
 
-    [Parameter, EditorRequired] public EventCallback<bool> StreamingChanged { get; set; }
+    [Parameter, EditorRequired]
+    public bool Streaming { get; set; }
 
-    [Parameter, EditorRequired] public ImageGenStyle SelectedImageGenStyle { get; set; }
+    [Parameter, EditorRequired]
+    public EventCallback<bool> StreamingChanged { get; set; }
 
-    [Parameter, EditorRequired] public EventCallback<ImageGenStyle> SelectedImageGenStyleChanged { get; set; }
+    [Parameter, EditorRequired]
+    public ImageGenStyle SelectedImageGenStyle { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback<ImageGenStyle> SelectedImageGenStyleChanged { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -33,14 +44,52 @@ public partial class RightSidebar(UserPersonalizationService userPersonalization
         _loadedUserId = UserId;
     }
 
-    private Task SetStreamingAsync(bool streaming)
+    private void SelectSection(SettingsSection section)
     {
-        return StreamingChanged.InvokeAsync(streaming);
+        _selectedSection = section;
+        _mcpValidationMessage = null;
     }
 
-    private Task SetImageGenStyleAsync(ImageGenStyle imageGenStyle)
+    private Variant GetSectionButtonVariant(SettingsSection section)
     {
-        return SelectedImageGenStyleChanged.InvokeAsync(imageGenStyle);
+        if (_selectedSection == section)
+        {
+            return Variant.Filled;
+        }
+
+        return Variant.Text;
+    }
+
+    private Color GetSectionButtonColor(SettingsSection section)
+    {
+        if (_selectedSection == section)
+        {
+            return Color.Primary;
+        }
+
+        return Color.Default;
+    }
+
+    private string GetSectionButtonClass(SettingsSection section)
+    {
+        if (_selectedSection == section)
+        {
+            return "settings-section-button active";
+        }
+
+        return "settings-section-button";
+    }
+
+    private async Task SetStreamingAsync(bool streaming)
+    {
+        Streaming = streaming;
+        await StreamingChanged.InvokeAsync(streaming);
+    }
+
+    private async Task SetImageGenStyleAsync(ImageGenStyle imageGenStyle)
+    {
+        SelectedImageGenStyle = imageGenStyle;
+        await SelectedImageGenStyleChanged.InvokeAsync(imageGenStyle);
     }
 
     private void SaveCustomInstructions()
@@ -48,24 +97,12 @@ public partial class RightSidebar(UserPersonalizationService userPersonalization
         UserPersonalization personalization = GetOrCreatePersonalization();
         personalization.CustomerInstructions = _customInstructions;
         userPersonalizationService.SavePersonalization(UserId, personalization);
-    }
-
-    private void ShowMcpServers()
-    {
-        LoadMcpServers();
-        _showMcpServers = true;
-        _mcpValidationMessage = null;
-    }
-
-    private void HideMcpServers()
-    {
-        _showMcpServers = false;
-        _mcpValidationMessage = null;
+        snackbar.Add("Custom instructions saved.", Severity.Success);
     }
 
     private void AddMcpServer()
     {
-        _mcpServers.Add(new McpServerEditor());
+        _mcpServers.Add(new());
         _mcpValidationMessage = null;
     }
 
@@ -81,7 +118,7 @@ public partial class RightSidebar(UserPersonalizationService userPersonalization
     {
         if (serverIndex >= 0 && serverIndex < _mcpServers.Count)
         {
-            _mcpServers[serverIndex].Headers.Add(new McpHeaderEditor());
+            _mcpServers[serverIndex].Headers.Add(new());
             _mcpValidationMessage = null;
         }
     }
@@ -105,20 +142,14 @@ public partial class RightSidebar(UserPersonalizationService userPersonalization
         UserPersonalization personalization = GetOrCreatePersonalization();
         personalization.McpServers = _mcpServers.Select(ToMcpServer).ToList();
         userPersonalizationService.SavePersonalization(UserId, personalization);
-        _showMcpServers = false;
         _mcpValidationMessage = null;
+        snackbar.Add("MCP servers saved.", Severity.Success);
     }
 
     private void LoadPersonalization()
     {
         UserPersonalization? personalization = userPersonalizationService.GetPersonalization(UserId);
         _customInstructions = personalization?.CustomerInstructions;
-        _mcpServers = personalization?.McpServers.Select(ToEditor).ToList() ?? [];
-    }
-
-    private void LoadMcpServers()
-    {
-        UserPersonalization? personalization = userPersonalizationService.GetPersonalization(UserId);
         _mcpServers = personalization?.McpServers.Select(ToEditor).ToList() ?? [];
     }
 
@@ -168,7 +199,7 @@ public partial class RightSidebar(UserPersonalizationService userPersonalization
 
     private static McpServerEditor ToEditor(McpServer server)
     {
-        return new McpServerEditor
+        return new()
         {
             Name = server.Name,
             Url = server.Url,
@@ -182,7 +213,7 @@ public partial class RightSidebar(UserPersonalizationService userPersonalization
 
     private static McpServer ToMcpServer(McpServerEditor editor)
     {
-        return new McpServer
+        return new()
         {
             Name = editor.Name.Trim(),
             Url = editor.Url.Trim(),
@@ -190,6 +221,18 @@ public partial class RightSidebar(UserPersonalizationService userPersonalization
                 .Where(x => !string.IsNullOrWhiteSpace(x.Key))
                 .ToDictionary(x => x.Key.Trim(), x => x.Value.Trim(), StringComparer.OrdinalIgnoreCase)
         };
+    }
+
+    private void CloseSettings()
+    {
+        MudDialog?.Close();
+    }
+
+    private enum SettingsSection
+    {
+        Chat,
+        Instructions,
+        McpServers
     }
 
     private sealed class McpServerEditor

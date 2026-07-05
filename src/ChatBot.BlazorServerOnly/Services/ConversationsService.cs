@@ -28,6 +28,16 @@ public class ConversationsService
         await File.WriteAllTextAsync(conversationFile, JsonSerializer.Serialize(conversation));
     }
 
+    public void DeleteConversation(Guid conversationId)
+    {
+        string conversationFolder = GetConversationFolder();
+        string conversationFile = Path.Combine(conversationFolder, $"{conversationId}.json");
+        if (File.Exists(conversationFile))
+        {
+            File.Delete(conversationFile);
+        }
+    }
+
     private static string GetConversationFolder()
     {
         string tempPath = Path.GetTempPath();

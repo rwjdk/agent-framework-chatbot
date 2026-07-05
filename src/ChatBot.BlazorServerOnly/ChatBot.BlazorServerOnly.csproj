@@ -10,8 +10,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="Blazor.LocalStorage" Version="10.0.0" />
+		<PackageReference Include="Markdig" Version="0.41.3" />
 		<PackageReference Include="Microsoft.Identity.Web" Version="4.12.0" />
 		<PackageReference Include="Microsoft.Identity.Web.UI" Version="4.12.0" />
+		<PackageReference Include="MudBlazor" Version="9.6.0" />
 		<ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
 	</ItemGroup>
 

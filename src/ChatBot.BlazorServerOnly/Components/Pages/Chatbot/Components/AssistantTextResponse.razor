@@ -2,7 +2,7 @@
 {
     <article class="message-row from-assistant">
         <div class="message-bubble">
-            <p class="message-text">@Message.Text</p>
+            <div class="message-text markdown-content">@RenderedMarkdown</div>
 
             @if (Message.Usage != null)
             {
@@ -13,6 +13,13 @@
 }
 @code
 {
+    private static readonly Markdig.MarkdownPipeline MarkdownPipeline = new Markdig.MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml()
+        .Build();
+
     [Parameter, EditorRequired]
     public ConversationMessage Message { get; set; }
+
+    private MarkupString RenderedMarkdown => new(Markdig.Markdown.ToHtml(Message.Text, MarkdownPipeline));
 }

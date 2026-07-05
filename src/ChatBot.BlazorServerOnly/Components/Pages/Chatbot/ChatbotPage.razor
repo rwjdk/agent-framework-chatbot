@@ -1,6 +1,11 @@
 @page "/"
 <main class="chat-page">
-    <LeftSidebar @ref="_leftSidebar" UserId="@_userId" OnNewChat="NewChat" OnConversationSelected="SwitchSession" />
+    <LeftSidebar @ref="_leftSidebar"
+                 UserId="@_userId"
+                 OnNewChat="NewChat"
+                 OnConversationSelected="SwitchSession"
+                 OnConversationDeleted="RemoveSession"
+                 OnSettings="OpenSettingsDialogAsync" />
     <div class="chat-main">
         <section class="chat-messages">
             <div class="message-list">
@@ -55,32 +60,44 @@
                 </div>
             }
             <div class="composer-controls">
-                <label class="file-upload-button" title="Attach files">
-                    +
-                    <InputFile class="file-upload-input"
-                               OnChange="SelectFilesAsync"
-                               accept="application/pdf,image/*"
-                               multiple />
-                </label>
-                <button class="voice-input-button"
-                        type="button"
-                        disabled="@_isTranscribingAudio"
-                        @onclick="ToggleRecordingAsync">
-                    @(_isTranscribingAudio ? "..." : _isRecordingAudio ? "Stop" : "Mic")
-                </button>
-                <textarea @bind="_input"
-                          @bind:event="oninput"
-                          rows="3"
-                          placeholder="Type a message..."
-                          onkeydown="if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); document.getElementById('send-message-button').click(); }"
-                          class="message-input"></textarea>
-                <button id="send-message-button" class="send-button" type="submit">Send</button>
+                <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                               Accept="application/pdf,image/*"
+                               MaximumFileCount="10"
+                               OnFilesChanged="SelectFilesAsync">
+                    <CustomContent Context="fileUpload">
+                        <MudTooltip Text="Attach files">
+                            <MudIconButton Class="composer-icon-button"
+                                           Icon="@Icons.Material.Filled.AttachFile"
+                                           Color="Color.Default"
+                                           ButtonType="ButtonType.Button"
+                                           OnClick="fileUpload.OpenFilePickerAsync" />
+                        </MudTooltip>
+                    </CustomContent>
+                </MudFileUpload>
+                <MudTextField T="string"
+                              @bind-Value="_input"
+                              Lines="3"
+                              Placeholder="Type a message..."
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              FullWidth="true"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.Send"
+                              AdornmentColor="Color.Primary"
+                              IconSize="Size.Medium"
+                              OnAdornmentClick="SendAsync"
+                              OnKeyDown="HandleComposerKeyDownAsync"
+                              Class="message-input" />
+                <MudTooltip Text="@GetVoiceButtonText()">
+                    <MudIconButton Class="composer-icon-button"
+                                   Icon="@GetVoiceButtonIcon()"
+                                   Color="@GetVoiceButtonColor()"
+                                   Disabled="@_isTranscribingAudio"
+                                   ButtonType="ButtonType.Button"
+                                   OnClick="ToggleRecordingAsync" />
+                </MudTooltip>
             </div>
         </form>
     </div>
-    <RightSidebar Streaming="_streaming"
-                  UserId="@_userId"
-                  StreamingChanged="SetStreamingAsync"
-                  SelectedImageGenStyle="_imageGenStyle"
-                  SelectedImageGenStyleChanged="SetImageGenStyleAsync" />
 </main>

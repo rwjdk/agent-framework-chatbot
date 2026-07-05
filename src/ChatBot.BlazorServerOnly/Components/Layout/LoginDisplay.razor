@@ -1,11 +1,44 @@
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
 <AuthorizeView>
     <Authorized>
-        <div class="login-display">
-            <div class="login-display-user">
-                <span class="login-display-label">Signed in as</span>
-                <span class="login-display-name">@context.User.Identity?.Name</span>
-            </div>
-            <a class="login-display-link" href="MicrosoftIdentity/Account/SignOut">Logout</a>
-        </div>
+        <MudStack Class="login-display" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Class="login-display-user" Spacing="0">
+                <MudText Typo="Typo.caption" Class="login-display-label">Signed in as</MudText>
+                <MudText Typo="Typo.body2" Class="login-display-name">@context.User.Identity?.Name</MudText>
+            </MudStack>
+            <MudTooltip Text="Logout">
+                <MudIconButton Class="logout-button"
+                               Icon="@Icons.Material.Filled.Logout"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               ButtonType="ButtonType.Button"
+                               OnClick="ConfirmLogoutAsync" />
+            </MudTooltip>
+        </MudStack>
     </Authorized>
 </AuthorizeView>
+
+@code {
+    private async Task ConfirmLogoutAsync()
+    {
+        DialogOptions options = new()
+        {
+            FullWidth = false,
+            MaxWidth = MaxWidth.ExtraSmall
+        };
+
+        bool? logout = await DialogService.ShowMessageBoxAsync(
+            "Logout?",
+            "Are you sure you want to logout?",
+            yesText: "Logout",
+            noText: "Cancel",
+            options: options);
+
+        if (logout == true)
+        {
+            NavigationManager.NavigateTo("MicrosoftIdentity/Account/SignOut", forceLoad: true);
+        }
+    }
+}

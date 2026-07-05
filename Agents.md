@@ -1,7 +1,9 @@
-# Agents
+﻿# Agents
 
 # Code Generation Rules
 - Always enforce `.editorconfig` rules.
+- Always build the website by running `build-website.bat` from the repository root; do not call `dotnet build` directly for website builds.
+- Do not test generated websites yourself; the user will check them.
 - When editing markdown files with box-drawing characters (for example the solution tree), preserve the original encoding and characters exactly to avoid mojibake.
 - Follow standard .NET naming conventions (naming violations are treated as errors).
 - Never use NuGet packages that are not MIT or Apache 2 unless specifically instructed to.

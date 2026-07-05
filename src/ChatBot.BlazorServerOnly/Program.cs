@@ -2,11 +2,13 @@ using System.Security.Claims;
 using ChatBot.BlazorServerOnly.Components;
 using ChatBot.BlazorServerOnly.Extensions;
 using ChatBot.BlazorServerOnly.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
+using MudBlazor.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -16,21 +18,21 @@ builder.Services.AddSingleton<FileUploadStorageService>();
 builder.Services.AddSingleton<ConversationChatMessageMapper>();
 builder.Services.AddSingleton<UserPersonalizationService>();
 builder.Services.AddLocalStorageServices();
+builder.Services.AddMudServices();
 
 //Auth (Start)
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
-builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
+builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
-    Func<RedirectContext, Task> redirectToIdentityProvider = options.Events.OnRedirectToIdentityProvider;
-    options.Events.OnRedirectToIdentityProvider = async context =>
+    options.ExpireTimeSpan = TimeSpan.FromDays(90);
+    options.SlidingExpiration = true;
+    options.Events.OnSigningIn = context =>
     {
-        await redirectToIdentityProvider(context);
+        context.Properties.IsPersistent = true;
+        context.Properties.ExpiresUtc = DateTimeOffset.UtcNow.Add(options.ExpireTimeSpan);
 
-        if (context.ProtocolMessage.RequestType == Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectRequestType.Authentication)
-        {
-            context.ProtocolMessage.Prompt = "select_account";
-        }
+        return Task.CompletedTask;
     };
 });
 builder.Services.AddAuthorizationBuilder()

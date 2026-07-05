@@ -1,24 +1,37 @@
-﻿@foreach (FunctionCallContent functionCallContent in Contents.OfType<FunctionCallContent>())
+@foreach (FunctionCallContent functionCallContent in Contents.OfType<FunctionCallContent>())
 {
     <article class="message-row from-assistant">
-        <details class="tool-call-entry">
-            <summary>
-                <span class="tool-call-title">Tool Call</span>
-                <span class="tool-call-summary">@functionCallContent.AsDisplayString()</span>
-            </summary>
-            <div class="tool-call-detail">
-                @if (FindFunctionResultContent(functionCallContent.CallId) is { } functionResultContent)
-                {
-                    <p class="meta-info">
-                        <span>@functionResultContent.AsDisplayString()</span>
-                    </p>
-                }
-            </div>
-        </details>
+        <MudExpansionPanels Class="tool-call-panels" MultiExpansion="true" Elevation="0">
+            <MudExpansionPanel Class="tool-call-entry">
+                <TitleContent>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="tool-call-header">
+                        <MudIcon Icon="@Icons.Material.Filled.BuildCircle" Size="Size.Small" />
+                        <MudText Typo="Typo.caption" Class="tool-call-title">Tool Call</MudText>
+                        <MudText Typo="Typo.caption" Class="tool-call-summary">@functionCallContent.AsDisplayString()</MudText>
+                    </MudStack>
+                </TitleContent>
+                <ChildContent>
+                    @if (ShouldShowFullFunctionCall(functionCallContent))
+                    {
+                        <div class="tool-call-full-request">
+                            <p class="tool-call-full-request-title">Full Request</p>
+                            <p class="tool-call-full-text">@functionCallContent.AsDisplayString()</p>
+                        </div>
+                    }
+
+                    @if (FindFunctionResultContent(functionCallContent.CallId) is { } functionResultContent)
+                    {
+                        <pre class="meta-info tool-call-result"><code>@functionResultContent.AsDisplayString()</code></pre>
+                    }
+                </ChildContent>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
     </article>
 }
 
 @code {
+    private const int CollapsedFunctionCallLength = 96;
+
     [Parameter, EditorRequired]
     public IEnumerable<AIContent> Contents { get; set; }
 
@@ -30,5 +43,10 @@
         IEnumerable<AIContent> contents = Conversation == null ? Contents : Conversation.Messages.SelectMany(x => x.Contents);
 
         return contents.OfType<FunctionResultContent>().FirstOrDefault(x => x.CallId == callId);
+    }
+
+    private static bool ShouldShowFullFunctionCall(FunctionCallContent functionCallContent)
+    {
+        return functionCallContent.AsDisplayString().Length > CollapsedFunctionCallLength;
     }
 }

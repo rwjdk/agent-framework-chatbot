@@ -1,0 +1,24 @@
+<MudDialog Class="rename-conversation-dialog">
+    <DialogContent>
+        <MudTextField T="string"
+                      @bind-Value="_title"
+                      Label="Conversation name"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      FullWidth="true"
+                      AutoFocus="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Default"
+                   OnClick="Cancel">
+            Cancel
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Disabled="@string.IsNullOrWhiteSpace(_title)"
+                   OnClick="Save">
+            Rename
+        </MudButton>
+    </DialogActions>
+</MudDialog>

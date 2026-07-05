@@ -2,6 +2,9 @@
   <Folder Name="/Blazor/">
     <Project Path="src/ChatBot.BlazorServerOnly/ChatBot.BlazorServerOnly.csproj" />
   </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="Agents.md" />
+  </Folder>
   <Project Path="src/AppHost/AppHost.csproj" />
   <Project Path="src/ServiceDefaults/ServiceDefaults.csproj" />
 </Solution>

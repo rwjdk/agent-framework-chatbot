@@ -1,10 +1,63 @@
 <aside class="conversation-sidebar">
-    <button class="new-chat-button" type="button" @onclick="OnNewChat">New Chat</button>
+    <MudButton Class="new-chat-button"
+               Variant="Variant.Filled"
+               Color="Color.Primary"
+               FullWidth="true"
+               StartIcon="@Icons.Material.Filled.Edit"
+               OnClick="OnNewChat">
+        New Chat
+    </MudButton>
 
     <div class="conversation-list">
+        <div class="conversation-list-header">Recents</div>
         @foreach (Conversation conversation in _conversations)
         {
-            <button class="conversation-button" type="button" @onclick="() => OnConversationSelected.InvokeAsync(conversation)">@(conversation.Title)</button>
+            <div class="conversation-row">
+                <button class="conversation-select-button"
+                        type="button"
+                        @onclick="() => OnConversationSelected.InvokeAsync(conversation)">
+                    @(conversation.Title)
+                </button>
+                <div class="conversation-actions">
+                    <MudTooltip Text="Conversation actions">
+                        <MudIconButton Class="conversation-actions-button"
+                                       Icon="@Icons.Material.Filled.MoreHoriz"
+                                       Color="Color.Default"
+                                       Size="Size.Small"
+                                       ButtonType="ButtonType.Button"
+                                       OnClick="() => ToggleConversationMenu(conversation)" />
+                    </MudTooltip>
+                    @if (_openConversationMenuId == conversation.Id)
+                    {
+                        <div class="conversation-actions-popover">
+                            <button class="conversation-menu-item"
+                                    type="button"
+                                    @onclick="() => RenameConversationAsync(conversation)">
+                                Rename
+                            </button>
+                            <button class="conversation-menu-item conversation-delete-menu-item"
+                                    type="button"
+                                    @onclick="() => ConfirmDeleteConversationAsync(conversation)">
+                                Delete
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
         }
+    </div>
+
+    <div class="conversation-sidebar-footer">
+        <LoginDisplay />
+        <div class="conversation-sidebar-footer-actions">
+            <MudTooltip Text="Settings">
+                <MudIconButton Class="settings-button"
+                               Icon="@Icons.Material.Filled.Settings"
+                               Color="Color.Default"
+                               Size="Size.Small"
+                               ButtonType="ButtonType.Button"
+                               OnClick="OnSettings" />
+            </MudTooltip>
+        </div>
     </div>
 </aside>

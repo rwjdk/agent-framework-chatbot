@@ -2,19 +2,27 @@ using ChatBot.BlazorServerOnly.Models;
 using ChatBot.BlazorServerOnly.Services;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 
 [UsedImplicitly]
-public partial class LeftSidebar(ConversationsService conversationsService)
+public partial class LeftSidebar(ConversationsService conversationsService, IDialogService dialogService)
 {
     private List<Conversation> _conversations = [];
+    private Guid? _openConversationMenuId;
 
     [Parameter]
     public EventCallback OnNewChat { get; set; }
 
     [Parameter]
     public EventCallback<Conversation> OnConversationSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<Conversation> OnConversationDeleted { get; set; }
+
+    [Parameter]
+    public EventCallback OnSettings { get; set; }
 
     [Parameter]
     public string UserId { get; set; } = string.Empty;
@@ -34,5 +42,60 @@ public partial class LeftSidebar(ConversationsService conversationsService)
     {
         _conversations.Add(conversation);
         StateHasChanged();
+    }
+
+    private void ToggleConversationMenu(Conversation conversation)
+    {
+        _openConversationMenuId = _openConversationMenuId == conversation.Id ? null : conversation.Id;
+    }
+
+    private async Task RenameConversationAsync(Conversation conversation)
+    {
+        _openConversationMenuId = null;
+        DialogParameters<RenameConversationDialog> parameters = new();
+        parameters.Add(x => x.Title, conversation.Title ?? string.Empty);
+
+        DialogOptions options = new()
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small
+        };
+
+        IDialogReference dialog = await dialogService.ShowAsync<RenameConversationDialog>("Rename conversation", parameters, options);
+        DialogResult? result = await dialog.Result;
+        if (result?.Canceled != false || result.Data is not string newTitle || string.IsNullOrWhiteSpace(newTitle))
+        {
+            return;
+        }
+
+        conversation.Title = newTitle.Trim();
+        await conversationsService.StoreConversationAsync(conversation);
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDeleteConversationAsync(Conversation conversation)
+    {
+        _openConversationMenuId = null;
+        DialogOptions options = new()
+        {
+            FullWidth = false,
+            MaxWidth = MaxWidth.ExtraSmall
+        };
+
+        bool? deleteConversation = await dialogService.ShowMessageBoxAsync(
+            "Delete conversation?",
+            $"Delete \"{conversation.Title}\"? This cannot be undone.",
+            yesText: "Yes",
+            noText: "No",
+            options: options);
+
+        if (deleteConversation != true)
+        {
+            return;
+        }
+
+        conversationsService.DeleteConversation(conversation.Id);
+        _conversations.Remove(conversation);
+        await OnConversationDeleted.InvokeAsync(conversation);
     }
 }

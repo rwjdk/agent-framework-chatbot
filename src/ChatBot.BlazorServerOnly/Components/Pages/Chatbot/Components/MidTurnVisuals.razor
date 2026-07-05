@@ -10,7 +10,7 @@
     if (StreamedReasoning != null)
     {
         <article class="message-row from-assistant">
-            <p class="meta-info">Thoughts: @StreamedReasoning</p>
+            <div class="meta-info markdown-content">@RenderedStreamedReasoning</div>
         </article>
     }
 
@@ -39,6 +39,11 @@ else
 }
 
 @code {
+    private static readonly Markdig.MarkdownPipeline MarkdownPipeline = new Markdig.MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .DisableHtml()
+        .Build();
+
     [Parameter, EditorRequired]
     public bool Streaming { get; set; }
 
@@ -56,4 +61,6 @@ else
     
     [Parameter, EditorRequired]
     public string? StreamedResponse { get; set; }
+
+    private MarkupString RenderedStreamedReasoning => new(Markdig.Markdown.ToHtml(StreamedReasoning ?? string.Empty, MarkdownPipeline));
 }

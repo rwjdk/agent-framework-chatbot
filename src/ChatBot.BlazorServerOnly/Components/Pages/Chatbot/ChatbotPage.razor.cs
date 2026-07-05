@@ -2,6 +2,7 @@ using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.OpenAI;
 using AgentFrameworkToolkit.Tools.Common;
 using ChatBot.BlazorServerOnly.AIContextProviders;
+using ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 using ChatBot.BlazorServerOnly.Extensions;
 using ChatBot.BlazorServerOnly.Models;
 using ChatBot.BlazorServerOnly.Services;
@@ -9,10 +10,13 @@ using ChatBot.BlazorServerOnly.Tools;
 using Azure.AI.OpenAI;
 using JetBrains.Annotations;
 using Microsoft.Agents.AI;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.AI;
 using Microsoft.JSInterop;
+using MudBlazor;
 using OpenAI.Audio;
 using System.ClientModel;
 using AgentFrameworkToolkit.Tools;
@@ -31,7 +35,8 @@ public partial class ChatbotPage(
     AuthenticationStateProvider authenticationStateProvider,
     UserPersonalizationService userPersonalizationService,
     OpenWeatherMapOptions openWeatherMapOptions,
-    IJSRuntime jsRuntime) : IAsyncDisposable
+    IJSRuntime jsRuntime,
+    IDialogService dialogService) : IAsyncDisposable
 {
     private const long MaxAttachmentSize = 20 * 1024 * 1024;
 
@@ -257,6 +262,14 @@ public partial class ChatbotPage(
         _memoryUpdate = null;
     }
 
+    private void RemoveSession(Conversation conversation)
+    {
+        if (_conversation.Id == conversation.Id)
+        {
+            NewChat();
+        }
+    }
+
     private async Task SetStreamingAsync(bool streaming)
     {
         _streaming = streaming;
@@ -267,6 +280,33 @@ public partial class ChatbotPage(
     {
         _imageGenStyle = imageGenStyle;
         await localStorageService.SetItemAsync(LocalStorageKeys.ImageGenStyle, imageGenStyle);
+    }
+
+    private async Task OpenSettingsDialogAsync()
+    {
+        DialogParameters<SettingsDialog> parameters = new();
+        parameters.Add(x => x.UserId, _userId);
+        parameters.Add(x => x.Streaming, _streaming);
+        parameters.Add(x => x.StreamingChanged, EventCallback.Factory.Create<bool>(this, SetStreamingAsync));
+        parameters.Add(x => x.SelectedImageGenStyle, _imageGenStyle);
+        parameters.Add(x => x.SelectedImageGenStyleChanged, EventCallback.Factory.Create<ImageGenStyle>(this, SetImageGenStyleAsync));
+
+        DialogOptions options = new()
+        {
+            CloseButton = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.Large
+        };
+
+        await dialogService.ShowAsync<SettingsDialog>("Settings", parameters, options);
+    }
+
+    private async Task HandleComposerKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args is { Key: "Enter", ShiftKey: false })
+        {
+            await SendAsync();
+        }
     }
 
     private async Task SelectFilesAsync(InputFileChangeEventArgs args)
@@ -363,6 +403,46 @@ public partial class ChatbotPage(
     private static bool IsSupportedFile(IBrowserFile file)
     {
         return file.ContentType == "application/pdf" || file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetVoiceButtonIcon()
+    {
+        if (_isTranscribingAudio)
+        {
+            return Icons.Material.Filled.HourglassEmpty;
+        }
+
+        if (_isRecordingAudio)
+        {
+            return Icons.Material.Filled.Stop;
+        }
+
+        return Icons.Material.Filled.Mic;
+    }
+
+    private Color GetVoiceButtonColor()
+    {
+        if (_isRecordingAudio)
+        {
+            return Color.Error;
+        }
+
+        return Color.Default;
+    }
+
+    private string GetVoiceButtonText()
+    {
+        if (_isTranscribingAudio)
+        {
+            return "Transcribing audio";
+        }
+
+        if (_isRecordingAudio)
+        {
+            return "Stop recording";
+        }
+
+        return "Record audio";
     }
 
     private void ResetMidTurnValues()
