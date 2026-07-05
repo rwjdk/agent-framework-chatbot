@@ -63,6 +63,8 @@ public partial class ChatbotPage(
     private Components.LeftSidebar? _leftSidebar;
     private bool _inImageGenerationMode;
     private IJSObjectReference? _audioRecorderModule;
+    private IJSObjectReference? _scrollModule;
+    private ElementReference _chatMessagesElement;
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,6 +100,7 @@ public partial class ChatbotPage(
         _memoryUpdate = null;
         _conversation.AddUserMessage(input, attachments);
         await InvokeAsync(StateHasChanged);
+        await ScrollMessagesToBottomAsync();
 
         switch (_imageGenStyle)
         {
@@ -424,6 +427,12 @@ public partial class ChatbotPage(
         }
     }
 
+    private async Task ScrollMessagesToBottomAsync()
+    {
+        _scrollModule ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", "/chatbotScroll.js");
+        await _scrollModule.InvokeVoidAsync("scrollToBottom", _chatMessagesElement);
+    }
+
     private async Task<List<ConversationAttachment>> SavePendingFilesAsync()
     {
         List<ConversationAttachment> attachments = [];
@@ -512,6 +521,11 @@ public partial class ChatbotPage(
                 }
 
                 await _audioRecorderModule.DisposeAsync();
+            }
+
+            if (_scrollModule is not null)
+            {
+                await _scrollModule.DisposeAsync();
             }
         }
         catch (JSDisconnectedException)

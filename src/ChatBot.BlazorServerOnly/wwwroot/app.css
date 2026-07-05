@@ -228,6 +228,11 @@ h1:focus {
     margin: 0 auto;
 }
 
+.message-list::after {
+    content: "";
+    flex: 0 0 300px;
+}
+
 .message-row {
     display: flex;
 }
@@ -245,7 +250,8 @@ h1:focus {
     flex-direction: column;
     align-items: flex-end;
     gap: 6px;
-    max-width: min(680px, 82%);
+    width: fit-content;
+    max-width: 40%;
 }
 
 .message-bubble {
@@ -259,6 +265,7 @@ h1:focus {
 }
 
 .from-user .message-bubble {
+    max-width: 100%;
     border-color: var(--mud-palette-primary);
     background: var(--mud-palette-primary);
     color: var(--mud-palette-primary-text);

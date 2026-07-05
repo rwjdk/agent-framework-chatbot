@@ -15,7 +15,7 @@
                  OnConversationDeleted="RemoveSession"
                  OnSettings="OpenSettingsDialogAsync" />
     <div class="chat-main">
-        <section class="chat-messages">
+        <section class="chat-messages" @ref="_chatMessagesElement">
             <div class="message-list">
                 @foreach (ConversationMessage message in _conversation.Messages)
                 {
