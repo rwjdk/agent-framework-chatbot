@@ -6,7 +6,14 @@
 
             @if (Message.Usage != null)
             {
-                <p class="meta-info">Tokens: [In: @Message.Usage?.InputTokenCount | Out: @Message.Usage?.OutputTokenCount | Reasoning: @Message.Usage?.ReasoningTokenCount]</p>
+                <div class="token-usage" aria-label="Token usage">
+                    <span>@Message.Usage.InputTokenCount in</span>
+                    <span>@Message.Usage.OutputTokenCount out</span>
+                    @if (Message.Usage.ReasoningTokenCount > 0)
+                    {
+                        <span>@Message.Usage.ReasoningTokenCount reasoning</span>
+                    }
+                </div>
             }
         </div>
     </article>
