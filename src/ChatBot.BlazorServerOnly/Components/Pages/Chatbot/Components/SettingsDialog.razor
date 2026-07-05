@@ -19,6 +19,14 @@
                                OnClick="() => SelectSection(SettingsSection.Instructions)">
                         Instructions
                     </MudButton>
+                    <MudButton Class="@GetSectionButtonClass(SettingsSection.Memories)"
+                               Variant="@GetSectionButtonVariant(SettingsSection.Memories)"
+                               Color="@GetSectionButtonColor(SettingsSection.Memories)"
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.Memory"
+                               OnClick="() => SelectSection(SettingsSection.Memories)">
+                        Memories
+                    </MudButton>
                     <MudButton Class="@GetSectionButtonClass(SettingsSection.McpServers)"
                                Variant="@GetSectionButtonVariant(SettingsSection.McpServers)"
                                Color="@GetSectionButtonColor(SettingsSection.McpServers)"
@@ -67,6 +75,57 @@
                                        Color="Color.Primary"
                                        StartIcon="@Icons.Material.Filled.Save"
                                        OnClick="SaveCustomInstructions">
+                                Save
+                            </MudButton>
+                        </MudStack>
+                        break;
+                    case SettingsSection.Memories:
+                        <MudStack Spacing="3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.h6">Memories</MudText>
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddMemory">
+                                    Memory
+                                </MudButton>
+                            </MudStack>
+
+                            @if (!string.IsNullOrWhiteSpace(_memoryValidationMessage))
+                            {
+                                <MudAlert Severity="Severity.Error" Dense="true">@_memoryValidationMessage</MudAlert>
+                            }
+
+                            @if (_memories.Count == 0)
+                            {
+                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No memories saved.</MudAlert>
+                            }
+
+                            @for (int memoryIndex = 0; memoryIndex < _memories.Count; memoryIndex++)
+                            {
+                                int currentMemoryIndex = memoryIndex;
+                                MemoryEditor memory = _memories[currentMemoryIndex];
+                                <div class="memory-editor-row">
+                                    <MudTextField T="string"
+                                                  @bind-Value="memory.Value"
+                                                  Label="Memory"
+                                                  Lines="2"
+                                                  Variant="Variant.Outlined"
+                                                  Margin="Margin.Dense"
+                                                  FullWidth="true" />
+                                    <MudTooltip Text="Remove memory">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Color="Color.Error"
+                                                       Size="Size.Small"
+                                                       OnClick="() => RemoveMemory(currentMemoryIndex)" />
+                                    </MudTooltip>
+                                </div>
+                            }
+
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Save"
+                                       OnClick="SaveMemories">
                                 Save
                             </MudButton>
                         </MudStack>

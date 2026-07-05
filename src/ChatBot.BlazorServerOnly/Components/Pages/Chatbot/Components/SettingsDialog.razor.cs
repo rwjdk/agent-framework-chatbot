@@ -10,8 +10,10 @@ namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 public partial class SettingsDialog(UserPersonalizationService userPersonalizationService, ISnackbar snackbar)
 {
     private string? _customInstructions;
+    private List<MemoryEditor> _memories = [];
     private List<McpServerEditor> _mcpServers = [];
     private string? _loadedUserId;
+    private string? _memoryValidationMessage;
     private string? _mcpValidationMessage;
     private SettingsSection _selectedSection = SettingsSection.Chat;
 
@@ -47,6 +49,7 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
     private void SelectSection(SettingsSection section)
     {
         _selectedSection = section;
+        _memoryValidationMessage = null;
         _mcpValidationMessage = null;
     }
 
@@ -100,6 +103,36 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
         snackbar.Add("Custom instructions saved.", Severity.Success);
     }
 
+    private void AddMemory()
+    {
+        _memories.Add(new());
+        _memoryValidationMessage = null;
+    }
+
+    private void RemoveMemory(int index)
+    {
+        if (index >= 0 && index < _memories.Count)
+        {
+            _memories.RemoveAt(index);
+            _memoryValidationMessage = null;
+        }
+    }
+
+    private void SaveMemories()
+    {
+        if (!TryValidateMemories(out string? validationMessage))
+        {
+            _memoryValidationMessage = validationMessage;
+            return;
+        }
+
+        UserPersonalization personalization = GetOrCreatePersonalization();
+        personalization.Memories = _memories.Select(x => x.Value.Trim()).ToList();
+        userPersonalizationService.SavePersonalization(UserId, personalization);
+        _memoryValidationMessage = null;
+        snackbar.Add("Memories saved.", Severity.Success);
+    }
+
     private void AddMcpServer()
     {
         _mcpServers.Add(new());
@@ -150,6 +183,10 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
     {
         UserPersonalization? personalization = userPersonalizationService.GetPersonalization(UserId);
         _customInstructions = personalization?.CustomerInstructions;
+        _memories = personalization?.Memories.Select(x => new MemoryEditor
+        {
+            Value = x
+        }).ToList() ?? [];
         _mcpServers = personalization?.McpServers.Select(ToEditor).ToList() ?? [];
     }
 
@@ -197,6 +234,28 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
         return true;
     }
 
+    private bool TryValidateMemories(out string? validationMessage)
+    {
+        if (_memories.Any(x => string.IsNullOrWhiteSpace(x.Value)))
+        {
+            validationMessage = "Memories cannot be blank.";
+            return false;
+        }
+
+        List<string> memories = _memories
+            .Select(x => x.Value.Trim())
+            .ToList();
+
+        if (memories.Count != memories.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            validationMessage = "Duplicate memories are not allowed.";
+            return false;
+        }
+
+        validationMessage = null;
+        return true;
+    }
+
     private static McpServerEditor ToEditor(McpServer server)
     {
         return new()
@@ -232,7 +291,13 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
     {
         Chat,
         Instructions,
+        Memories,
         McpServers
+    }
+
+    private sealed class MemoryEditor
+    {
+        public string Value { get; set; } = string.Empty;
     }
 
     private sealed class McpServerEditor

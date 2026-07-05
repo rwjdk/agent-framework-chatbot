@@ -659,6 +659,13 @@ h1:focus {
     background: var(--mud-palette-background-gray);
 }
 
+.memory-editor-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 8px;
+    align-items: start;
+}
+
 .mcp-header-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
