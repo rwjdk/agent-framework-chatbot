@@ -1,4 +1,4 @@
-using ChatBot.BlazorServerOnly.Models;
+﻿using ChatBot.BlazorServerOnly.Models;
 using ChatBot.BlazorServerOnly.Services;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Components;
@@ -27,6 +27,9 @@ public partial class LeftSidebar(ConversationsService conversationsService, IDia
     [Parameter]
     public string UserId { get; set; } = string.Empty;
 
+    [Parameter]
+    public bool IsDisabled { get; set; }
+
     protected override async Task OnParametersSetAsync()
     {
         if (string.IsNullOrWhiteSpace(UserId))
@@ -35,22 +38,33 @@ public partial class LeftSidebar(ConversationsService conversationsService, IDia
             return;
         }
 
-        _conversations = await conversationsService.LoadPreviousConversationsAsync(UserId);
+        List<Conversation> conversations = await conversationsService.LoadPreviousConversationsAsync(UserId);
+        _conversations = conversations.OrderByDescending(x => x.Id).ToList();
     }
 
     public void AddConversation(Conversation conversation)
     {
-        _conversations.Add(conversation);
+        _conversations.Insert(0, conversation);
         StateHasChanged();
     }
 
     private void ToggleConversationMenu(Conversation conversation)
     {
+        if (IsDisabled)
+        {
+            return;
+        }
+
         _openConversationMenuId = _openConversationMenuId == conversation.Id ? null : conversation.Id;
     }
 
     private async Task RenameConversationAsync(Conversation conversation)
     {
+        if (IsDisabled)
+        {
+            return;
+        }
+
         _openConversationMenuId = null;
         DialogParameters<RenameConversationDialog> parameters = new();
         parameters.Add(x => x.Title, conversation.Title ?? string.Empty);
@@ -75,6 +89,11 @@ public partial class LeftSidebar(ConversationsService conversationsService, IDia
 
     private async Task ConfirmDeleteConversationAsync(Conversation conversation)
     {
+        if (IsDisabled)
+        {
+            return;
+        }
+
         _openConversationMenuId = null;
         DialogOptions options = new()
         {

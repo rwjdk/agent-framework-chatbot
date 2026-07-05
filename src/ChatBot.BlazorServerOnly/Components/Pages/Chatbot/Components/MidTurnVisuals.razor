@@ -7,6 +7,11 @@
 
 @if (Streaming)
 {
+    if (IsWaitingForAssistant && !HasStreamedVisuals)
+    {
+        <AssistantProgress />
+    }
+
     if (StreamedReasoning != null)
     {
         <article class="message-row from-assistant">
@@ -28,13 +33,9 @@
 else
 {
     //Non-streaming
-    if (Conversation.Messages.LastOrDefault()?.Role == ChatRole.User)
+    if (IsWaitingForAssistant)
     {
-        <article class="message-row from-assistant">
-            <div class="message-bubble">
-                <p class="message-text">...</p>
-            </div>
-        </article>
+        <AssistantProgress />
     }
 }
 
@@ -63,4 +64,10 @@ else
     public string? StreamedResponse { get; set; }
 
     private MarkupString RenderedStreamedReasoning => new(Markdig.Markdown.ToHtml(StreamedReasoning ?? string.Empty, MarkdownPipeline));
+
+    private bool IsWaitingForAssistant => Conversation.Messages.LastOrDefault()?.Role == ChatRole.User;
+
+    private bool HasStreamedVisuals => !string.IsNullOrWhiteSpace(StreamedReasoning)
+                                      || !string.IsNullOrWhiteSpace(StreamedResponse)
+                                      || StreamedContents.Any();
 }

@@ -1,10 +1,11 @@
-@page "/"
+﻿@page "/"
 <main class="chat-page">
     <MudTooltip Text="@GetThemeToggleText()">
         <MudIconButton Class="theme-toggle-button"
                        Icon="@GetThemeToggleIcon()"
                        Color="Color.Default"
                        ButtonType="ButtonType.Button"
+                       Disabled="@_isSendingMessage"
                        OnClick="ToggleDarkModeAsync" />
     </MudTooltip>
 
@@ -13,7 +14,8 @@
                  OnNewChat="NewChat"
                  OnConversationSelected="SwitchSession"
                  OnConversationDeleted="RemoveSession"
-                 OnSettings="OpenSettingsDialogAsync" />
+                 OnSettings="OpenSettingsDialogAsync"
+                 IsDisabled="@_isSendingMessage" />
     <div class="chat-main">
         <section class="chat-messages" @ref="_chatMessagesElement">
             <div class="message-list">
@@ -73,6 +75,7 @@
                 <MudFileUpload T="IReadOnlyList<IBrowserFile>"
                                Accept="application/pdf,image/*"
                                MaximumFileCount="10"
+                               Disabled="@_isSendingMessage"
                                OnFilesChanged="SelectFilesAsync">
                     <CustomContent Context="fileUpload">
                         <MudTooltip Text="Attach files">
@@ -80,6 +83,7 @@
                                            Icon="@Icons.Material.Filled.AttachFile"
                                            Color="Color.Default"
                                            ButtonType="ButtonType.Button"
+                                           Disabled="@_isSendingMessage"
                                            OnClick="fileUpload.OpenFilePickerAsync" />
                         </MudTooltip>
                     </CustomContent>
@@ -89,7 +93,6 @@
                 <MudTextField T="string"
                               @bind-Value="_input"
                               Lines="3"
-                              Placeholder="Type a message..."
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Immediate="true"
@@ -98,6 +101,7 @@
                               AdornmentIcon="@Icons.Material.Filled.Send"
                               AdornmentColor="Color.Primary"
                               IconSize="Size.Medium"
+                              Disabled="@_isSendingMessage"
                               OnAdornmentClick="SendAsync"
                               OnKeyDown="HandleComposerKeyDownAsync"
                               Class="message-input" />
@@ -105,7 +109,7 @@
                     <MudIconButton Class="composer-icon-button"
                                    Icon="@GetVoiceButtonIcon()"
                                    Color="@GetVoiceButtonColor()"
-                                   Disabled="@_isTranscribingAudio"
+                                   Disabled="@(_isSendingMessage || _isTranscribingAudio)"
                                    ButtonType="ButtonType.Button"
                                    OnClick="ToggleRecordingAsync" />
                 </MudTooltip>

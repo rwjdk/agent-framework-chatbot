@@ -1,4 +1,4 @@
-using AgentFrameworkToolkit.AzureOpenAI;
+﻿using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.OpenAI;
 using AgentFrameworkToolkit.Tools.Common;
 using ChatBot.BlazorServerOnly.AIContextProviders;
@@ -55,6 +55,7 @@ public partial class ChatbotPage(
     private MemoryUpdate? _memoryUpdate;
     private bool _isRecordingAudio;
     private bool _isTranscribingAudio;
+    private bool _isSendingMessage;
 
     //Options
     private ImageGenStyle _imageGenStyle;
@@ -78,6 +79,11 @@ public partial class ChatbotPage(
 
     private async Task SendAsync()
     {
+        if (_isSendingMessage)
+        {
+            return;
+        }
+
         string? input = _input?.Trim();
 
         if (string.IsNullOrWhiteSpace(input) && _pendingFiles.Count == 0)
@@ -86,57 +92,66 @@ public partial class ChatbotPage(
         }
         input ??= string.Empty;
 
-        if (_conversation.MissingATitle)
-        {
-            AzureOpenAIAgent titleGenerationAgent = azureOpenAIAgentFactory.CreateAgent(OpenAIChatModels.Gpt41Nano);
-            string message = $"Given the following message: '{GetTitleSource(input)}' generate a max 25 char long title for this question";
-            AgentResponse<string> response = await titleGenerationAgent.RunAsync<string>(message);
-            _conversation.Title = response.Result;
-            _leftSidebar?.AddConversation(_conversation);
-        }
-
-        List<ConversationAttachment> attachments = await SavePendingFilesAsync();
-        ResetMidTurnValues();
-        _memoryUpdate = null;
-        _conversation.AddUserMessage(input, attachments);
+        _isSendingMessage = true;
         await InvokeAsync(StateHasChanged);
-        await ScrollMessagesToBottomAsync();
-
-        switch (_imageGenStyle)
+        try
         {
-            case ImageGenStyle.RouterAgent:
-                {
-                    AzureOpenAIAgent routerAgent = azureOpenAIAgentFactory.CreateAgent(new AgentOptions
-                    {
-                        ClientType = ClientType.ChatClient,
-                        Model = OpenAIChatModels.Gpt5Mini,
-                        ReasoningEffort = OpenAIReasoningEffort.Low,
-                        Instructions = "You are a router-agent determining what task the user is asking (being either generating an image (use can say show image, generate image, draw image, render image) or being a normal chatbot). If you are at all in doubt, go the chatbot route"
-                    });
+            if (_conversation.MissingATitle)
+            {
+                AzureOpenAIAgent titleGenerationAgent = azureOpenAIAgentFactory.CreateAgent(OpenAIChatModels.Gpt41Nano);
+                string message = $"Given the following message: '{GetTitleSource(input)}' generate a max 25 char long title for this question";
+                AgentResponse<string> response = await titleGenerationAgent.RunAsync<string>(message);
+                _conversation.Title = response.Result;
+                _leftSidebar?.AddConversation(_conversation);
+            }
 
-                    AgentResponse<TaskType> routerResponse = await routerAgent.RunAsync<TaskType>(await conversationChatMessageMapper.ToChatMessagesAsync(_conversation));
-                    switch (routerResponse.Result)
+            List<ConversationAttachment> attachments = await SavePendingFilesAsync();
+            ResetMidTurnValues();
+            _memoryUpdate = null;
+            _conversation.AddUserMessage(input, attachments);
+            await InvokeAsync(StateHasChanged);
+            await ScrollMessagesToBottomAsync();
+
+            switch (_imageGenStyle)
+            {
+                case ImageGenStyle.RouterAgent:
                     {
-                        case TaskType.GenerateImageRoute:
-                            await DoImageGenerationAsync();
-                            break;
-                        case TaskType.ChatBotRoute:
-                            await AnswerWithChatbotAsync();
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
+                        AzureOpenAIAgent routerAgent = azureOpenAIAgentFactory.CreateAgent(new AgentOptions
+                        {
+                            ClientType = ClientType.ChatClient,
+                            Model = OpenAIChatModels.Gpt5Mini,
+                            ReasoningEffort = OpenAIReasoningEffort.Low,
+                            Instructions = "You are a router-agent determining what task the user is asking (being either generating an image (use can say show image, generate image, draw image, render image) or being a normal chatbot). If you are at all in doubt, go the chatbot route"
+                        });
+
+                        AgentResponse<TaskType> routerResponse = await routerAgent.RunAsync<TaskType>(await conversationChatMessageMapper.ToChatMessagesAsync(_conversation));
+                        switch (routerResponse.Result)
+                        {
+                            case TaskType.GenerateImageRoute:
+                                await DoImageGenerationAsync();
+                                break;
+                            case TaskType.ChatBotRoute:
+                                await AnswerWithChatbotAsync();
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
                     }
-                }
-                break;
-            case ImageGenStyle.ImageGenAsTool:
-                await AnswerWithChatbotAsync();
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+                    break;
+                case ImageGenStyle.ImageGenAsTool:
+                    await AnswerWithChatbotAsync();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
 
-        await InvokeAsync(StateHasChanged);
-        await conversationsService.StoreConversationAsync(_conversation);
+            await conversationsService.StoreConversationAsync(_conversation);
+        }
+        finally
+        {
+            _isSendingMessage = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task DoImageGenerationAsync()
@@ -255,6 +270,11 @@ public partial class ChatbotPage(
 
     private void NewChat()
     {
+        if (_isSendingMessage)
+        {
+            return;
+        }
+
         _conversation = Conversation.NewConversation(_userId);
         ResetMidTurnValues();
         _memoryUpdate = null;
@@ -262,6 +282,11 @@ public partial class ChatbotPage(
 
     private void SwitchSession(Conversation conversation)
     {
+        if (_isSendingMessage)
+        {
+            return;
+        }
+
         _conversation = conversation;
         ResetMidTurnValues();
         _memoryUpdate = null;
@@ -289,6 +314,11 @@ public partial class ChatbotPage(
 
     private async Task ToggleDarkModeAsync()
     {
+        if (_isSendingMessage)
+        {
+            return;
+        }
+
         await themeModeState.ToggleAsync();
     }
 
@@ -314,6 +344,11 @@ public partial class ChatbotPage(
 
     private async Task OpenSettingsDialogAsync()
     {
+        if (_isSendingMessage)
+        {
+            return;
+        }
+
         DialogParameters<SettingsDialog> parameters = new();
         parameters.Add(x => x.UserId, _userId);
         parameters.Add(x => x.Streaming, _streaming);
@@ -325,7 +360,7 @@ public partial class ChatbotPage(
         {
             CloseButton = true,
             FullWidth = true,
-            MaxWidth = MaxWidth.Large
+            MaxWidth = MaxWidth.Medium
         };
 
         await dialogService.ShowAsync<SettingsDialog>("Settings", parameters, options);
@@ -351,7 +386,7 @@ public partial class ChatbotPage(
 
     private async Task HandleComposerKeyDownAsync(KeyboardEventArgs args)
     {
-        if (args is { Key: "Enter", ShiftKey: false })
+        if (!_isSendingMessage && args is { Key: "Enter", ShiftKey: false })
         {
             await SendAsync();
         }
@@ -359,6 +394,11 @@ public partial class ChatbotPage(
 
     private async Task SelectFilesAsync(InputFileChangeEventArgs args)
     {
+        if (_isSendingMessage)
+        {
+            return;
+        }
+
         List<PendingAttachment> pendingFiles = [];
         foreach (IBrowserFile file in args.GetMultipleFiles().Where(IsSupportedFile))
         {
@@ -379,6 +419,11 @@ public partial class ChatbotPage(
 
     private async Task ToggleRecordingAsync()
     {
+        if (_isSendingMessage)
+        {
+            return;
+        }
+
         _audioRecorderModule ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", "/chatbotAudioRecorder.js");
 
         if (!_isRecordingAudio)

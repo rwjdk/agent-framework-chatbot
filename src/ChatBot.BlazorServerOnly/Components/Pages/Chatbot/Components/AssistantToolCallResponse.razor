@@ -1,14 +1,21 @@
 @foreach (FunctionCallContent functionCallContent in Contents.OfType<FunctionCallContent>())
 {
+    FunctionResultContent? functionResultContent = FindFunctionResultContent(functionCallContent.CallId);
     <article class="message-row from-assistant">
         <MudExpansionPanels Class="tool-call-panels" MultiExpansion="true" Elevation="0">
             <MudExpansionPanel Class="tool-call-entry">
                 <TitleContent>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="tool-call-header">
-                        <MudIcon Icon="@Icons.Material.Filled.BuildCircle" Size="Size.Small" />
-                        <MudText Typo="Typo.caption" Class="tool-call-title">Tool Call</MudText>
-                        <MudText Typo="Typo.caption" Class="tool-call-summary">@functionCallContent.AsDisplayString()</MudText>
-                    </MudStack>
+                    <div class="tool-call-title-content">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="tool-call-header">
+                            <MudIcon Icon="@Icons.Material.Filled.BuildCircle" Size="Size.Small" />
+                            <MudText Typo="Typo.caption" Class="tool-call-title">Tool Call</MudText>
+                            <MudText Typo="Typo.caption" Class="tool-call-summary">@functionCallContent.AsDisplayString()</MudText>
+                        </MudStack>
+                        @if (functionResultContent is null)
+                        {
+                            <MudProgressLinear Class="tool-call-progress" Indeterminate="true" Color="Color.Primary" />
+                        }
+                    </div>
                 </TitleContent>
                 <ChildContent>
                     @if (ShouldShowFullFunctionCall(functionCallContent))
@@ -19,7 +26,7 @@
                         </div>
                     }
 
-                    @if (FindFunctionResultContent(functionCallContent.CallId) is { } functionResultContent)
+                    @if (functionResultContent is not null)
                     {
                         <pre class="meta-info tool-call-result"><code>@functionResultContent.AsDisplayString()</code></pre>
                     }

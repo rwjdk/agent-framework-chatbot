@@ -1,9 +1,10 @@
-<aside class="conversation-sidebar">
+﻿<aside class="conversation-sidebar">
     <MudButton Class="new-chat-button"
                Variant="Variant.Filled"
                Color="Color.Primary"
                FullWidth="true"
                StartIcon="@Icons.Material.Filled.Edit"
+               Disabled="@IsDisabled"
                OnClick="OnNewChat">
         New Chat
     </MudButton>
@@ -15,6 +16,7 @@
             <div class="conversation-row">
                 <button class="conversation-select-button"
                         type="button"
+                        disabled="@IsDisabled"
                         @onclick="() => OnConversationSelected.InvokeAsync(conversation)">
                     @(conversation.Title)
                 </button>
@@ -25,6 +27,7 @@
                                        Color="Color.Default"
                                        Size="Size.Small"
                                        ButtonType="ButtonType.Button"
+                                       Disabled="@IsDisabled"
                                        OnClick="() => ToggleConversationMenu(conversation)" />
                     </MudTooltip>
                     @if (_openConversationMenuId == conversation.Id)
@@ -32,11 +35,13 @@
                         <div class="conversation-actions-popover">
                             <button class="conversation-menu-item"
                                     type="button"
+                                    disabled="@IsDisabled"
                                     @onclick="() => RenameConversationAsync(conversation)">
                                 Rename
                             </button>
                             <button class="conversation-menu-item conversation-delete-menu-item"
                                     type="button"
+                                    disabled="@IsDisabled"
                                     @onclick="() => ConfirmDeleteConversationAsync(conversation)">
                                 Delete
                             </button>
@@ -56,6 +61,7 @@
                                Color="Color.Default"
                                Size="Size.Small"
                                ButtonType="ButtonType.Button"
+                               Disabled="@IsDisabled"
                                OnClick="OnSettings" />
             </MudTooltip>
         </div>

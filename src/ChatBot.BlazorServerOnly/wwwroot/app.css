@@ -271,6 +271,11 @@ h1:focus {
     color: var(--mud-palette-primary-text);
 }
 
+.assistant-progress-bubble {
+    width: min(260px, 82%);
+    padding: 12px;
+}
+
 .message-text {
     margin: 0;
     overflow-wrap: anywhere;
@@ -383,6 +388,11 @@ h1:focus {
     overflow: hidden;
 }
 
+.tool-call-title-content {
+    width: 100%;
+    min-width: 0;
+}
+
 .tool-call-header .mud-icon-root {
     flex: 0 0 auto;
 }
@@ -424,6 +434,10 @@ h1:focus {
 .tool-call-result {
     overflow-x: auto;
     white-space: pre;
+}
+
+.tool-call-progress {
+    margin-top: 6px;
 }
 
 .composer {
@@ -612,7 +626,8 @@ h1:focus {
     display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
     gap: 20px;
-    width: min(920px, 82vw);
+    box-sizing: border-box;
+    width: 100%;
     min-height: 520px;
     max-height: calc(100vh - 180px);
 }
