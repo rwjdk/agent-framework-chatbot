@@ -1,0 +1,13 @@
+<MudDialog Class="image-preview-dialog">
+    <DialogContent>
+        <img class="image-preview-dialog-image" src="@ImageSource" alt="@AltText" />
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [Parameter, EditorRequired]
+    public string ImageSource { get; set; }
+
+    [Parameter, EditorRequired]
+    public string AltText { get; set; }
+}

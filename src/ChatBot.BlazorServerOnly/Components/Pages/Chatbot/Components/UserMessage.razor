@@ -8,7 +8,9 @@
                     <div class="attachment-thumbnail" title="@attachment.FileName">
                         @if (attachment.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                         {
-                            <img src="@attachment.RelativePath" alt="@attachment.FileName" />
+                            <button type="button" class="chat-image-button attachment-image-button" @onclick="() => OpenImagePreviewAsync(attachment.RelativePath, attachment.FileName)">
+                                <img src="@attachment.RelativePath" alt="@attachment.FileName" />
+                            </button>
                         }
                         else
                         {
@@ -25,6 +27,27 @@
 </article>
 
 @code {
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
+
     [Parameter, EditorRequired]
     public ConversationMessage Message { get; set; }
+
+    private async Task OpenImagePreviewAsync(string imageSource, string altText)
+    {
+        DialogParameters<ImagePreviewDialog> parameters = new()
+        {
+            { x => x.ImageSource, imageSource },
+            { x => x.AltText, altText }
+        };
+        DialogOptions options = new()
+        {
+            CloseButton = true,
+            FullScreen = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.ExtraExtraLarge
+        };
+
+        await DialogService.ShowAsync<ImagePreviewDialog>(altText, parameters, options);
+    }
 }

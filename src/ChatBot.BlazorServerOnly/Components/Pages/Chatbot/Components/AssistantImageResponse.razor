@@ -1,11 +1,34 @@
 ﻿@if (!string.IsNullOrWhiteSpace(Message.ImagePath))
 {
     <article class="message-row from-assistant">
-        <img src="@Message.ImagePath" alt="Generated Image" style="width: 50%"/>
+        <button type="button" class="chat-image-button assistant-image-button" @onclick="OpenImagePreviewAsync">
+            <img src="@Message.ImagePath" alt="Generated Image" />
+        </button>
     </article>
 }
 @code
 {
+    [Inject]
+    private IDialogService DialogService { get; set; } = null!;
+
     [Parameter, EditorRequired]
     public ConversationMessage Message { get; set; }
+
+    private async Task OpenImagePreviewAsync()
+    {
+        DialogParameters<ImagePreviewDialog> parameters = new()
+        {
+            { x => x.ImageSource, Message.ImagePath },
+            { x => x.AltText, "Generated Image" }
+        };
+        DialogOptions options = new()
+        {
+            CloseButton = true,
+            FullScreen = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.ExtraExtraLarge
+        };
+
+        await DialogService.ShowAsync<ImagePreviewDialog>("Generated Image", parameters, options);
+    }
 }

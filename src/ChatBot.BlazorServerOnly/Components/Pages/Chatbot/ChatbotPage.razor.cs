@@ -34,6 +34,7 @@ public partial class ChatbotPage(
     ILocalStorageService localStorageService,
     AuthenticationStateProvider authenticationStateProvider,
     UserPersonalizationService userPersonalizationService,
+    ThemeModeState themeModeState,
     OpenWeatherMapOptions openWeatherMapOptions,
     IJSRuntime jsRuntime,
     IDialogService dialogService) : IAsyncDisposable
@@ -70,6 +71,7 @@ public partial class ChatbotPage(
         _conversation = Conversation.NewConversation(_userId);
         _streaming = await localStorageService.GetItemAsync<bool>(LocalStorageKeys.Streaming);
         _imageGenStyle = await localStorageService.GetItemAsync<ImageGenStyle>(LocalStorageKeys.ImageGenStyle);
+        await themeModeState.InitializeAsync();
     }
 
     private async Task SendAsync()
@@ -282,6 +284,31 @@ public partial class ChatbotPage(
         await localStorageService.SetItemAsync(LocalStorageKeys.ImageGenStyle, imageGenStyle);
     }
 
+    private async Task ToggleDarkModeAsync()
+    {
+        await themeModeState.ToggleAsync();
+    }
+
+    private string GetThemeToggleIcon()
+    {
+        if (themeModeState.IsDarkMode)
+        {
+            return Icons.Material.Filled.LightMode;
+        }
+
+        return Icons.Material.Filled.DarkMode;
+    }
+
+    private string GetThemeToggleText()
+    {
+        if (themeModeState.IsDarkMode)
+        {
+            return "Switch to light mode";
+        }
+
+        return "Switch to dark mode";
+    }
+
     private async Task OpenSettingsDialogAsync()
     {
         DialogParameters<SettingsDialog> parameters = new();
@@ -299,6 +326,24 @@ public partial class ChatbotPage(
         };
 
         await dialogService.ShowAsync<SettingsDialog>("Settings", parameters, options);
+    }
+
+    private async Task OpenImagePreviewAsync(string imageSource, string altText)
+    {
+        DialogParameters<ImagePreviewDialog> parameters = new()
+        {
+            { x => x.ImageSource, imageSource },
+            { x => x.AltText, altText }
+        };
+        DialogOptions options = new()
+        {
+            CloseButton = true,
+            FullScreen = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.ExtraExtraLarge
+        };
+
+        await dialogService.ShowAsync<ImagePreviewDialog>(altText, parameters, options);
     }
 
     private async Task HandleComposerKeyDownAsync(KeyboardEventArgs args)

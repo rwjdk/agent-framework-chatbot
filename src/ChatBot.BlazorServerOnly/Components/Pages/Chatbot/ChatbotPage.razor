@@ -1,5 +1,13 @@
 @page "/"
 <main class="chat-page">
+    <MudTooltip Text="@GetThemeToggleText()">
+        <MudIconButton Class="theme-toggle-button"
+                       Icon="@GetThemeToggleIcon()"
+                       Color="Color.Default"
+                       ButtonType="ButtonType.Button"
+                       OnClick="ToggleDarkModeAsync" />
+    </MudTooltip>
+
     <LeftSidebar @ref="_leftSidebar"
                  UserId="@_userId"
                  OnNewChat="NewChat"
@@ -49,7 +57,9 @@
                         <div class="attachment-thumbnail" title="@file.FileName">
                             @if (file.PreviewDataUri is not null)
                             {
-                                <img src="@file.PreviewDataUri" alt="@file.FileName" />
+                                <button type="button" class="chat-image-button attachment-image-button" @onclick="() => OpenImagePreviewAsync(file.PreviewDataUri, file.FileName)">
+                                    <img src="@file.PreviewDataUri" alt="@file.FileName" />
+                                </button>
                             }
                             else
                             {
