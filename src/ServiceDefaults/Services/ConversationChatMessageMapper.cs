@@ -1,9 +1,9 @@
-using ChatBot.BlazorServerOnly.Models;
 using Microsoft.Extensions.AI;
+using ServiceDefaults.Models;
 
-namespace ChatBot.BlazorServerOnly.Services;
+namespace ServiceDefaults.Services;
 
-public class ConversationChatMessageMapper(FileUploadStorageService fileUploadStorageService)
+public class ConversationChatMessageMapper(BlobStorageService blobStorageService)
 {
     public async Task<List<ChatMessage>> ToChatMessagesAsync(Conversation conversation)
     {
@@ -23,7 +23,7 @@ public class ConversationChatMessageMapper(FileUploadStorageService fileUploadSt
             List<AIContent> contents = [new TextContent(message.Text)];
             foreach (ConversationAttachment attachment in message.Attachments)
             {
-                contents.Add(await fileUploadStorageService.CreateDataContentAsync(attachment));
+                contents.Add(await blobStorageService.CreateDataContentAsync(attachment));
             }
 
             return new ChatMessage(ChatRole.User, contents);

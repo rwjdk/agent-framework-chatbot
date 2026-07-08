@@ -1,15 +1,19 @@
-using ChatBot.BlazorServerOnly.Models;
-using ChatBot.BlazorServerOnly.Services;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using ServiceDefaults.Models;
+using ServiceDefaults.Services;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 
 [UsedImplicitly]
-public partial class SettingsDialog(UserPersonalizationService userPersonalizationService, ISnackbar snackbar)
+public partial class SettingsDialog(
+    SettingsService settingsService,
+    ConversationsService conversationsService,
+    IDialogService dialogService,
+    ISnackbar snackbar)
 {
-    private string? _customInstructions;
+    private Settings? _settings;
     private List<MemoryEditor> _memories = [];
     private List<McpServerEditor> _mcpServers = [];
     private string? _loadedUserId;
@@ -24,16 +28,13 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
     public required string UserId { get; set; }
 
     [Parameter, EditorRequired]
-    public bool Streaming { get; set; }
+    public required Settings Settings { get; set; }
 
     [Parameter, EditorRequired]
-    public EventCallback<bool> StreamingChanged { get; set; }
+    public EventCallback<Settings> SettingsChanged { get; set; }
 
     [Parameter, EditorRequired]
-    public ImageGenStyle SelectedImageGenStyle { get; set; }
-
-    [Parameter, EditorRequired]
-    public EventCallback<ImageGenStyle> SelectedImageGenStyleChanged { get; set; }
+    public EventCallback SettingsDeleted { get; set; }
 
     protected override void OnParametersSet()
     {
@@ -42,7 +43,12 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
             return;
         }
 
-        LoadPersonalization();
+        _settings = CloneSettings(Settings);
+        _memories = _settings.UserMemories.Select(x => new MemoryEditor
+        {
+            Value = x
+        }).ToList();
+        _mcpServers = _settings.McpServers.Select(ToEditor).ToList();
         _loadedUserId = UserId;
     }
 
@@ -83,29 +89,19 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
         return "settings-section-button";
     }
 
-    private async Task SetStreamingAsync(bool streaming)
+    private async Task SaveChatSettingsAsync()
     {
-        Streaming = streaming;
-        await StreamingChanged.InvokeAsync(streaming);
+        await SaveCurrentSettingsAsync("Chat settings saved.");
     }
 
-    private async Task SetImageGenStyleAsync(ImageGenStyle imageGenStyle)
+    private async Task SaveInstructionsAsync()
     {
-        SelectedImageGenStyle = imageGenStyle;
-        await SelectedImageGenStyleChanged.InvokeAsync(imageGenStyle);
-    }
-
-    private void SaveCustomInstructions()
-    {
-        UserPersonalization personalization = GetOrCreatePersonalization();
-        personalization.CustomerInstructions = _customInstructions;
-        userPersonalizationService.SavePersonalization(UserId, personalization);
-        snackbar.Add("Custom instructions saved.", Severity.Success);
+        await SaveCurrentSettingsAsync("Instructions saved.");
     }
 
     private void AddMemory()
     {
-        _memories.Add(new());
+        _memories.Add(new MemoryEditor());
         _memoryValidationMessage = null;
     }
 
@@ -118,24 +114,27 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
         }
     }
 
-    private void SaveMemories()
+    private async Task SaveMemoriesAsync()
     {
+        if (_settings is null)
+        {
+            return;
+        }
+
         if (!TryValidateMemories(out string? validationMessage))
         {
             _memoryValidationMessage = validationMessage;
             return;
         }
 
-        UserPersonalization personalization = GetOrCreatePersonalization();
-        personalization.Memories = _memories.Select(x => x.Value.Trim()).ToList();
-        userPersonalizationService.SavePersonalization(UserId, personalization);
+        _settings.UserMemories = _memories.Select(x => x.Value.Trim()).ToList();
         _memoryValidationMessage = null;
-        snackbar.Add("Memories saved.", Severity.Success);
+        await SaveCurrentSettingsAsync("Memories saved.");
     }
 
     private void AddMcpServer()
     {
-        _mcpServers.Add(new());
+        _mcpServers.Add(new McpServerEditor());
         _mcpValidationMessage = null;
     }
 
@@ -151,7 +150,7 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
     {
         if (serverIndex >= 0 && serverIndex < _mcpServers.Count)
         {
-            _mcpServers[serverIndex].Headers.Add(new());
+            _mcpServers[serverIndex].Headers.Add(new McpHeaderEditor());
             _mcpValidationMessage = null;
         }
     }
@@ -164,41 +163,62 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
         }
     }
 
-    private void SaveMcpServers()
+    private async Task SaveIntegrationsAsync()
     {
+        if (_settings is null)
+        {
+            return;
+        }
+
         if (!TryValidateMcpServers(out string? validationMessage))
         {
             _mcpValidationMessage = validationMessage;
             return;
         }
 
-        UserPersonalization personalization = GetOrCreatePersonalization();
-        personalization.McpServers = _mcpServers.Select(ToMcpServer).ToList();
-        userPersonalizationService.SavePersonalization(UserId, personalization);
+        _settings.McpServers = _mcpServers.Select(ToMcpServer).ToList();
         _mcpValidationMessage = null;
-        snackbar.Add("MCP servers saved.", Severity.Success);
+        await SaveCurrentSettingsAsync("Integrations saved.");
     }
 
-    private void LoadPersonalization()
+    private async Task SaveCurrentSettingsAsync(string message)
     {
-        UserPersonalization? personalization = userPersonalizationService.GetPersonalization(UserId);
-        _customInstructions = personalization?.CustomerInstructions;
-        _memories = personalization?.Memories.Select(x => new MemoryEditor
+        if (_settings is null)
         {
-            Value = x
-        }).ToList() ?? [];
-        _mcpServers = personalization?.McpServers.Select(ToEditor).ToList() ?? [];
+            return;
+        }
+
+        await settingsService.SaveAsync(_settings);
+        Settings changedSettings = CloneSettings(_settings);
+        await SettingsChanged.InvokeAsync(changedSettings);
+        snackbar.Add(message, Severity.Success);
     }
 
-    private UserPersonalization GetOrCreatePersonalization()
+    private async Task DeleteSettingsAndConversationsAsync()
     {
-        UserPersonalization? personalization = userPersonalizationService.GetPersonalization(UserId);
-        personalization ??= new UserPersonalization
+        DialogOptions options = new()
         {
-            Memories = [],
-            McpServers = []
+            FullWidth = false,
+            MaxWidth = MaxWidth.ExtraSmall
         };
-        return personalization;
+
+        bool? deleteData = await dialogService.ShowMessageBoxAsync(
+            "Delete settings and conversations?",
+            "This permanently deletes your settings and conversations. This cannot be undone.",
+            yesText: "Delete",
+            noText: "Cancel",
+            options: options);
+
+        if (deleteData != true)
+        {
+            return;
+        }
+
+        await conversationsService.DeleteUserConversationsAsync(UserId);
+        await settingsService.DeleteSettingsAsync(UserId);
+        snackbar.Add("Settings and conversations deleted.", Severity.Success);
+        MudDialog?.Close();
+        await SettingsDeleted.InvokeAsync();
     }
 
     private bool TryValidateMcpServers(out string? validationMessage)
@@ -256,9 +276,35 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
         return true;
     }
 
+    private static Settings CloneSettings(Settings settings)
+    {
+        return new Settings
+        {
+            UserId = settings.UserId,
+            Streaming = settings.Streaming,
+            ShowReasoning = settings.ShowReasoning,
+            ShowTokens = settings.ShowTokens,
+            ShowToolCalls = settings.ShowToolCalls,
+            ShowMemoryUpdate = settings.ShowMemoryUpdate,
+            Instructions = settings.Instructions,
+            UserMemories = settings.UserMemories.ToList(),
+            McpServers = settings.McpServers.Select(CloneMcpServer).ToList(),
+        };
+    }
+
+    private static McpServer CloneMcpServer(McpServer server)
+    {
+        return new McpServer
+        {
+            Name = server.Name,
+            Url = server.Url,
+            Headers = server.Headers.ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase)
+        };
+    }
+
     private static McpServerEditor ToEditor(McpServer server)
     {
-        return new()
+        return new McpServerEditor
         {
             Name = server.Name,
             Url = server.Url,
@@ -272,7 +318,7 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
 
     private static McpServer ToMcpServer(McpServerEditor editor)
     {
-        return new()
+        return new McpServer
         {
             Name = editor.Name.Trim(),
             Url = editor.Url.Trim(),
@@ -292,7 +338,8 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
         Chat,
         Instructions,
         Memories,
-        McpServers
+        McpServers,
+        DangerZone
     }
 
     private sealed class MemoryEditor
@@ -304,7 +351,7 @@ public partial class SettingsDialog(UserPersonalizationService userPersonalizati
     {
         public string Name { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
-        public List<McpHeaderEditor> Headers { get; set; } = [];
+        public List<McpHeaderEditor> Headers { get; init; } = [];
     }
 
     private sealed class McpHeaderEditor

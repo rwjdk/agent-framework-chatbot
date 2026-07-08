@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using Microsoft.Extensions.AI;
 
-namespace ChatBot.BlazorServerOnly.Extensions;
+namespace ServiceDefaults.Extensions;
 
 public static class FunctionCallContentExtensions
 {

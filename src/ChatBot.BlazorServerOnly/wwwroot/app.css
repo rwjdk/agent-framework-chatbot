@@ -673,6 +673,23 @@ h1:focus {
     align-items: center;
 }
 
+.settings-password-page {
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.settings-password-panel {
+    display: grid;
+    gap: 14px;
+    width: min(100%, 520px);
+}
+
+.settings-password-model-grid {
+    display: grid;
+    gap: 10px;
+}
+
 @media (max-width: 760px) {
     .conversation-sidebar {
         flex-basis: 210px;

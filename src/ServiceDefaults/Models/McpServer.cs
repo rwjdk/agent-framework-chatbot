@@ -1,5 +1,8 @@
-﻿namespace ChatBot.BlazorServerOnly.Models;
+﻿using JetBrains.Annotations;
 
+namespace ServiceDefaults.Models;
+
+[PublicAPI]
 public class McpServer
 {
     public required string Name { get; set; }

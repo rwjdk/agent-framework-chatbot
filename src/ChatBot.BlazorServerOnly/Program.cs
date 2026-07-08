@@ -1,25 +1,24 @@
 using System.Security.Claims;
 using ChatBot.BlazorServerOnly.Components;
-using ChatBot.BlazorServerOnly.Extensions;
-using ChatBot.BlazorServerOnly.Services;
+using Markdig;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using MudBlazor.Services;
+using ServiceDefaults.Extensions;
+using ServiceDefaults.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults(); //From Aspire Service Defaults
-builder.Services.AddSingleton<ConversationsService>();
-builder.Services.AddSingleton<FileUploadStorageService>();
-builder.Services.AddSingleton<ConversationChatMessageMapper>();
-builder.Services.AddSingleton<UserPersonalizationService>();
-builder.Services.AddScoped<ThemeModeState>();
 builder.Services.AddLocalStorageServices();
 builder.Services.AddMudServices();
+builder.Services.AddSingleton(new MarkdownPipelineBuilder()
+    .UseAdvancedExtensions()
+    .DisableHtml()
+    .Build());
 
 //Auth (Start)
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
@@ -68,7 +67,7 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-app.MapGet("/attachments/{storedFileName}", (string storedFileName, ClaimsPrincipal user, FileUploadStorageService fileUploadStorageService) =>
+app.MapGet("/attachments/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, BlobStorageService blobStorageService) =>
 {
     string userId = user.GetUserId();
     if (string.IsNullOrWhiteSpace(userId))
@@ -76,19 +75,30 @@ app.MapGet("/attachments/{storedFileName}", (string storedFileName, ClaimsPrinci
         return Results.Forbid();
     }
 
-    string? filePath = fileUploadStorageService.GetFilePath(userId, storedFileName);
-    if (filePath is null)
+    BlobStorageService.BlobFile? blobFile = await blobStorageService.GetAttachmentAsync(userId, storedFileName);
+    if (blobFile is null)
     {
         return Results.NotFound();
     }
 
-    FileExtensionContentTypeProvider contentTypeProvider = new();
-    if (!contentTypeProvider.TryGetContentType(filePath, out string? contentType))
+    return Results.File(blobFile.Bytes, blobFile.ContentType);
+}).RequireAuthorization();
+
+app.MapGet("/generated-images/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, BlobStorageService blobStorageService) =>
+{
+    string userId = user.GetUserId();
+    if (string.IsNullOrWhiteSpace(userId))
     {
-        contentType = "application/octet-stream";
+        return Results.Forbid();
     }
 
-    return Results.File(filePath, contentType);
+    BlobStorageService.BlobFile? blobFile = await blobStorageService.GetGeneratedImageAsync(userId, storedFileName);
+    if (blobFile is null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.File(blobFile.Bytes, blobFile.ContentType);
 }).RequireAuthorization();
 
 app.MapControllers();

@@ -1,10 +1,11 @@
-﻿@if (!string.IsNullOrWhiteSpace(Message.Text))
+﻿@using ServiceDefaults.Models
+@if (!string.IsNullOrWhiteSpace(Message.Text))
 {
     <article class="message-row from-assistant">
         <div class="message-bubble">
             <div class="message-text markdown-content">@RenderedMarkdown</div>
 
-            @if (Message.Usage != null)
+            @if (Settings.ShowTokens && Message.Usage != null)
             {
                 <div class="token-usage" aria-label="Token usage">
                     <span>@Message.Usage.InputTokenCount in</span>
@@ -20,13 +21,14 @@
 }
 @code
 {
-    private static readonly Markdig.MarkdownPipeline MarkdownPipeline = new Markdig.MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .DisableHtml()
-        .Build();
+    [Inject]
+    private MarkdownPipeline MarkdownPipeline { get; set; } = default!;
 
+    [Parameter, EditorRequired]
+    public Settings Settings { get; set; }
+    
     [Parameter, EditorRequired]
     public ConversationMessage Message { get; set; }
 
-    private MarkupString RenderedMarkdown => new(Markdig.Markdown.ToHtml(Message.Text, MarkdownPipeline));
+    private MarkupString RenderedMarkdown => new(Markdown.ToHtml(Message.Text, MarkdownPipeline));
 }

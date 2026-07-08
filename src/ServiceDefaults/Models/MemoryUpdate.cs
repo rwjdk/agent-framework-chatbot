@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
 
-namespace ChatBot.BlazorServerOnly.Models;
+namespace ServiceDefaults.Models;
 
 [UsedImplicitly]
 public record MemoryUpdate(List<string> MemoryToAdd, List<string> MemoryToRemove)

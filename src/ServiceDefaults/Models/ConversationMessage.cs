@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 
-namespace ChatBot.BlazorServerOnly.Models;
+namespace ServiceDefaults.Models;
 
 public class ConversationMessage
 {

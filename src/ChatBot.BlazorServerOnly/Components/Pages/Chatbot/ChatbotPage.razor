@@ -1,119 +1,127 @@
-﻿@page "/"
-<main class="chat-page">
-    <MudTooltip Text="@GetThemeToggleText()">
-        <MudIconButton Class="theme-toggle-button"
-                       Icon="@GetThemeToggleIcon()"
-                       Color="Color.Default"
-                       ButtonType="ButtonType.Button"
-                       Disabled="@_isSendingMessage"
-                       OnClick="ToggleDarkModeAsync" />
-    </MudTooltip>
+@page "/"
+@using ChatBot.BlazorServerOnly.Models
+@using ServiceDefaults.Models
 
-    <LeftSidebar @ref="_leftSidebar"
-                 UserId="@_userId"
-                 OnNewChat="NewChat"
-                 OnConversationSelected="SwitchSession"
-                 OnConversationDeleted="RemoveSession"
-                 OnSettings="OpenSettingsDialogAsync"
-                 IsDisabled="@_isSendingMessage" />
-    <div class="chat-main">
-        <section class="chat-messages" @ref="_chatMessagesElement">
-            <div class="message-list">
-                @foreach (ConversationMessage message in _conversation.Messages)
-                {
-                    if (message.Role == ChatRole.User)
+<PageTitle>Chatbot</PageTitle>
+@if (_settings != null)
+{
+    <main class="chat-page">
+        <LeftSidebar @ref="_leftSidebar"
+                     UserId="@_userId"
+                     OnNewChat="NewChat"
+                     OnConversationSelected="SwitchSession"
+                     OnConversationDeleted="RemoveSession"
+                     OnSettings="OpenSettingsDialogAsync"
+                     IsDisabled="@_visualState.IsSendingMessage"/>
+        <div class="chat-main">
+            <section class="chat-messages" @ref="_chatMessagesElement">
+                <div class="message-list">
+                    @foreach (ConversationMessage message in _conversation.Messages)
                     {
-                        <UserMessage Message="message" />
-                    }
-                    else if (message.Role == ChatRole.Assistant)
-                    {
-                        <AssistantReasoningResponse Contents="message.Contents" />
-                        <AssistantToolCallResponse Contents="message.Contents" Conversation="_conversation" />
-                        <AssistantTextResponse Message="message" />
-                        <AssistantImageResponse Message="message"/>
-                    }
-                }
-
-                <MidTurnVisuals Streaming="_streaming"
-                                InImageGenerationMode="_inImageGenerationMode"
-                                Conversation="_conversation"
-                                StreamedContents="_streamedContent"
-                                StreamedResponse="@_streamedResponse"
-                                StreamedReasoning="@_streamedReasoning" />
-                
-                @if (_memoryUpdate != null)
-                {
-                    <article class="message-row from-assistant">
-                        <p class="meta-info" style="color: maroon">@_memoryUpdate.GetDisplayString()</p>
-                    </article>
-                }
-            </div>
-        </section>
-
-        <form class="composer" @onsubmit="SendAsync">
-            @if (_pendingFiles.Count > 0)
-            {
-                <div class="pending-attachments">
-                    @foreach (PendingAttachment file in _pendingFiles)
-                    {
-                        <div class="attachment-thumbnail" title="@file.FileName">
-                            @if (file.PreviewDataUri is not null)
+                        if (message.Role == ChatRole.User)
+                        {
+                            <UserMessage Message="message"/>
+                        }
+                        else if (message.Role == ChatRole.Assistant)
+                        {
+                            if (_settings.ShowReasoning)
                             {
-                                <button type="button" class="chat-image-button attachment-image-button" @onclick="() => OpenImagePreviewAsync(file.PreviewDataUri, file.FileName)">
-                                    <img src="@file.PreviewDataUri" alt="@file.FileName" />
-                                </button>
+                                <AssistantReasoningResponse Contents="message.Contents"/>
                             }
-                            else
+
+                            if (_settings.ShowToolCalls)
                             {
-                                <span>PDF</span>
+                                <AssistantToolCallResponse Contents="message.Contents" Conversation="_conversation"/>
                             }
-                        </div>
+
+                            <AssistantTextResponse Message="message" Settings="_settings"/>
+                            <AssistantImageResponse Message="message"/>
+                        }
+                    }
+
+                    <MidTurnVisuals Settings="_settings"
+                                    Conversation="_conversation"
+                                    VisualState="_visualState"/>
+
+                    @if (_settings.ShowMemoryUpdate && _visualState.MemoryUpdate != null)
+                    {
+                        <article class="message-row from-assistant">
+                            <p class="meta-info" style="color: maroon">@_visualState.MemoryUpdate.GetDisplayString()</p>
+                        </article>
                     }
                 </div>
-            }
-            <div class="composer-controls">
-                <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                               Accept="application/pdf,image/*"
-                               MaximumFileCount="10"
-                               Disabled="@_isSendingMessage"
-                               OnFilesChanged="SelectFilesAsync">
-                    <CustomContent Context="fileUpload">
-                        <MudTooltip Text="Attach files">
-                            <MudIconButton Class="composer-icon-button"
-                                           Icon="@Icons.Material.Filled.AttachFile"
-                                           Color="Color.Default"
-                                           ButtonType="ButtonType.Button"
-                                           Disabled="@_isSendingMessage"
-                                           OnClick="fileUpload.OpenFilePickerAsync" />
-                        </MudTooltip>
-                    </CustomContent>
-                    <SelectedTemplate>
-                    </SelectedTemplate>
-                </MudFileUpload>
-                <MudTextField T="string"
-                              @bind-Value="_input"
-                              Lines="3"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Immediate="true"
-                              FullWidth="true"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@Icons.Material.Filled.Send"
-                              AdornmentColor="Color.Primary"
-                              IconSize="Size.Medium"
-                              Disabled="@_isSendingMessage"
-                              OnAdornmentClick="SendAsync"
-                              OnKeyDown="HandleComposerKeyDownAsync"
-                              Class="message-input" />
-                <MudTooltip Text="@GetVoiceButtonText()">
-                    <MudIconButton Class="composer-icon-button"
-                                   Icon="@GetVoiceButtonIcon()"
-                                   Color="@GetVoiceButtonColor()"
-                                   Disabled="@(_isSendingMessage || _isTranscribingAudio)"
-                                   ButtonType="ButtonType.Button"
-                                   OnClick="ToggleRecordingAsync" />
-                </MudTooltip>
-            </div>
-        </form>
-    </div>
-</main>
+            </section>
+
+            <form class="composer" @onsubmit="SendAsync">
+                @if (_userInput.Attachments.Count > 0)
+                {
+                    <div class="pending-attachments">
+                        @foreach (UserInputAttachment file in _userInput.Attachments)
+                        {
+                            <div class="attachment-thumbnail" title="@file.FileName">
+                                @if (file.PreviewDataUri is not null)
+                                {
+                                    <button type="button" class="chat-image-button attachment-image-button" @onclick="() => OpenImagePreviewAsync(file.PreviewDataUri, file.FileName)">
+                                        <img src="@file.PreviewDataUri" alt="@file.FileName"/>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span>PDF</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                <div class="composer-controls">
+                    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                                   Accept="application/pdf,image/*"
+                                   MaximumFileCount="10"
+                                   Disabled="@_visualState.IsSendingMessage"
+                                   OnFilesChanged="SelectFilesAsync">
+                        <CustomContent Context="fileUpload">
+                            <MudTooltip Text="Attach files">
+                                <MudIconButton Class="composer-icon-button"
+                                               Icon="@Icons.Material.Filled.AttachFile"
+                                               Color="Color.Default"
+                                               ButtonType="ButtonType.Button"
+                                               Disabled="@_visualState.IsSendingMessage"
+                                               OnClick="fileUpload.OpenFilePickerAsync"/>
+                            </MudTooltip>
+                        </CustomContent>
+                        <SelectedTemplate>
+                        </SelectedTemplate>
+                    </MudFileUpload>
+                    <MudTextField T="string"
+                                  @bind-Value="@_userInput.Text"
+                                  Lines="3"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Immediate="true"
+                                  FullWidth="true"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@Icons.Material.Filled.Send"
+                                  AdornmentColor="Color.Primary"
+                                  IconSize="Size.Medium"
+                                  Disabled="@_visualState.IsSendingMessage"
+                                  OnAdornmentClick="SendAsync"
+                                  OnKeyDown="HandleComposerKeyDownAsync"
+                                  Class="message-input"/>
+
+                    <MudTooltip Text="@(_visualState.RecordingStateText)">
+                        <MudIconButton Class="composer-icon-button"
+                                       Icon="@(_visualState.RecordingStateIcon)"
+                                       Color="@(_visualState.RecordingStateColor)"
+                                       Disabled="_visualState.DisableRecordingButton"
+                                       ButtonType="ButtonType.Button"
+                                       OnClick="ToggleRecordingAsync"/>
+                    </MudTooltip>
+                </div>
+            </form>
+        </div>
+    </main>
+}
+else
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate/>
+}
