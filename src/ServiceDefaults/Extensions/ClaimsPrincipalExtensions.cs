@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace ChatBot.BlazorServerOnly.Extensions;
+namespace ServiceDefaults.Extensions;
 
 public static class ClaimsPrincipalExtensions
 {

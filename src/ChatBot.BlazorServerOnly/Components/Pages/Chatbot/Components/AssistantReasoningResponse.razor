@@ -9,15 +9,13 @@
 }
 @code 
 {
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .DisableHtml()
-        .Build();
+    [Inject]
+    private MarkdownPipeline MarkdownPipeline { get; set; } = default!;
 
     [Parameter, EditorRequired]
     public IEnumerable<AIContent> Contents { get; set; }
 
-    private static MarkupString RenderMarkdown(string text)
+    private MarkupString RenderMarkdown(string text)
     {
         return new(Markdown.ToHtml(text, MarkdownPipeline));
     }

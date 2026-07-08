@@ -21,10 +21,8 @@
 }
 @code
 {
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .DisableHtml()
-        .Build();
+    [Inject]
+    private MarkdownPipeline MarkdownPipeline { get; set; } = default!;
 
     [Parameter, EditorRequired]
     public Settings Settings { get; set; }

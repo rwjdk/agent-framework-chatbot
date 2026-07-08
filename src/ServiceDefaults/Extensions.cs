@@ -59,9 +59,11 @@ public static class Extensions
 
         //Other Services
         builder.Services.AddSingleton<AgentService>();
+        builder.Services.AddSingleton<BlobStorageService>();
         builder.Services.AddSingleton<ConversationsService>();
         builder.Services.AddSingleton<ImageGenerationService>();
         builder.Services.AddSingleton<SettingsService>();
+        builder.Services.AddSingleton<ConversationChatMessageMapper>();
 
         builder.ConfigureOpenTelemetry();
 

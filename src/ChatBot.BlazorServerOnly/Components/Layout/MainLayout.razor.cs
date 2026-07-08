@@ -1,26 +1,23 @@
 using JetBrains.Annotations;
-using ChatBot.BlazorServerOnly.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace ChatBot.BlazorServerOnly.Components.Layout;
 
 [UsedImplicitly]
 public partial class MainLayout(
-    ThemeModeState themeModeState) : LayoutComponentBase, IDisposable
+    ILocalStorageService localStorageService) : LayoutComponentBase
 {
+    private bool IsDarkMode { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        themeModeState.Changed += ThemeModeChanged;
-        await themeModeState.InitializeAsync();
+        IsDarkMode = await localStorageService.GetItemAsync<bool>(LocalStorageKeys.DarkMode);
     }
 
-    private void ThemeModeChanged()
+    private async Task ToggleDarkModeAsync()
     {
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    public void Dispose()
-    {
-        themeModeState.Changed -= ThemeModeChanged;
+        IsDarkMode = !IsDarkMode;
+        await localStorageService.SetItemAsync(LocalStorageKeys.DarkMode, IsDarkMode);
     }
 }

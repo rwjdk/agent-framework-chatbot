@@ -1,25 +1,18 @@
 @page "/"
 @using ChatBot.BlazorServerOnly.Models
 @using ServiceDefaults.Models
+
+<PageTitle>Chatbot</PageTitle>
 @if (_settings != null)
 {
     <main class="chat-page">
-        <MudTooltip Text="@GetThemeToggleText()">
-            <MudIconButton Class="theme-toggle-button"
-                           Icon="@GetThemeToggleIcon()"
-                           Color="Color.Default"
-                           ButtonType="ButtonType.Button"
-                           Disabled="@_state.IsSendingMessage"
-                           OnClick="ToggleDarkModeAsync"/>
-        </MudTooltip>
-
         <LeftSidebar @ref="_leftSidebar"
                      UserId="@_userId"
                      OnNewChat="NewChat"
                      OnConversationSelected="SwitchSession"
                      OnConversationDeleted="RemoveSession"
                      OnSettings="OpenSettingsDialogAsync"
-                     IsDisabled="@_state.IsSendingMessage"/>
+                     IsDisabled="@_visualState.IsSendingMessage"/>
         <div class="chat-main">
             <section class="chat-messages" @ref="_chatMessagesElement">
                 <div class="message-list">
@@ -48,12 +41,12 @@
 
                     <MidTurnVisuals Settings="_settings"
                                     Conversation="_conversation"
-                                    State="_state"/>
+                                    VisualState="_visualState"/>
 
-                    @if (_settings.ShowMemoryUpdate && _state.MemoryUpdate != null)
+                    @if (_settings.ShowMemoryUpdate && _visualState.MemoryUpdate != null)
                     {
                         <article class="message-row from-assistant">
-                            <p class="meta-info" style="color: maroon">@_state.MemoryUpdate.GetDisplayString()</p>
+                            <p class="meta-info" style="color: maroon">@_visualState.MemoryUpdate.GetDisplayString()</p>
                         </article>
                     }
                 </div>
@@ -84,7 +77,7 @@
                     <MudFileUpload T="IReadOnlyList<IBrowserFile>"
                                    Accept="application/pdf,image/*"
                                    MaximumFileCount="10"
-                                   Disabled="@_state.IsSendingMessage"
+                                   Disabled="@_visualState.IsSendingMessage"
                                    OnFilesChanged="SelectFilesAsync">
                         <CustomContent Context="fileUpload">
                             <MudTooltip Text="Attach files">
@@ -92,7 +85,7 @@
                                                Icon="@Icons.Material.Filled.AttachFile"
                                                Color="Color.Default"
                                                ButtonType="ButtonType.Button"
-                                               Disabled="@_state.IsSendingMessage"
+                                               Disabled="@_visualState.IsSendingMessage"
                                                OnClick="fileUpload.OpenFilePickerAsync"/>
                             </MudTooltip>
                         </CustomContent>
@@ -110,16 +103,16 @@
                                   AdornmentIcon="@Icons.Material.Filled.Send"
                                   AdornmentColor="Color.Primary"
                                   IconSize="Size.Medium"
-                                  Disabled="@_state.IsSendingMessage"
+                                  Disabled="@_visualState.IsSendingMessage"
                                   OnAdornmentClick="SendAsync"
                                   OnKeyDown="HandleComposerKeyDownAsync"
                                   Class="message-input"/>
 
-                    <MudTooltip Text="@(_state.RecordingStateText)">
+                    <MudTooltip Text="@(_visualState.RecordingStateText)">
                         <MudIconButton Class="composer-icon-button"
-                                       Icon="@(_state.RecordingStateIcon)"
-                                       Color="@(_state.RecordingStateColor)"
-                                       Disabled="_state.DisableRecordingButton"
+                                       Icon="@(_visualState.RecordingStateIcon)"
+                                       Color="@(_visualState.RecordingStateColor)"
+                                       Disabled="_visualState.DisableRecordingButton"
                                        ButtonType="ButtonType.Button"
                                        OnClick="ToggleRecordingAsync"/>
                     </MudTooltip>

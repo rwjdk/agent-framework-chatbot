@@ -3,7 +3,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Microsoft.Extensions.AI;
 
-namespace ChatBot.BlazorServerOnly.Extensions;
+namespace ServiceDefaults.Extensions;
 
 public static class FunctionResultContentExtensions
 {

@@ -7,7 +7,7 @@
         <AssistantProgress />
     }
 
-    if (Settings.ShowReasoning && State.StreamedReasoning != null)
+    if (Settings.ShowReasoning && VisualState.StreamedReasoning != null)
     {
         <article class="message-row from-assistant">
             <div class="meta-info markdown-content">@RenderedStreamedReasoning</div>
@@ -16,14 +16,14 @@
 
     if (Settings.ShowToolCalls)
     {
-        <AssistantToolCallResponse Contents="State.StreamedContents"/>
+        <AssistantToolCallResponse Contents="VisualState.StreamedContents"/>
     }
     
-    if (!string.IsNullOrEmpty(State.StreamedResponse))
+    if (!string.IsNullOrEmpty(VisualState.StreamedResponse))
     {
         <article class="message-row from-assistant">
             <div class="message-bubble">
-                <p class="message-text">@State.StreamedResponse</p>
+                <p class="message-text">@VisualState.StreamedResponse</p>
             </div>
         </article>
     }
@@ -38,10 +38,8 @@ else
 }
 
 @code {
-    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .DisableHtml()
-        .Build();
+    [Inject]
+    private MarkdownPipeline MarkdownPipeline { get; set; } = default!;
 
     [Parameter, EditorRequired]
     public Settings Settings { get; set; }
@@ -50,13 +48,13 @@ else
     public Conversation Conversation { get; set; }
 
     [Parameter, EditorRequired]
-    public State State { get; set; }
+    public VisualState VisualState { get; set; }
 
-    private MarkupString RenderedStreamedReasoning => new(Markdown.ToHtml(State.StreamedReasoning ?? string.Empty, MarkdownPipeline));
+    private MarkupString RenderedStreamedReasoning => new(Markdown.ToHtml(VisualState.StreamedReasoning ?? string.Empty, MarkdownPipeline));
 
     private bool IsWaitingForAssistant => Conversation.Messages.LastOrDefault()?.Role == ChatRole.User;
 
-    private bool HasStreamedVisuals => !string.IsNullOrWhiteSpace(State.StreamedReasoning)
-                                      || !string.IsNullOrWhiteSpace(State.StreamedResponse)
-                                      || State.StreamedContents.Any();
+    private bool HasStreamedVisuals => !string.IsNullOrWhiteSpace(VisualState.StreamedReasoning)
+                                      || !string.IsNullOrWhiteSpace(VisualState.StreamedResponse)
+                                      || VisualState.StreamedContents.Any();
 }

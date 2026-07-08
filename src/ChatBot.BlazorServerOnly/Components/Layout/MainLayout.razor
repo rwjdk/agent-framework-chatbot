@@ -1,9 +1,15 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-<MudThemeProvider IsDarkMode="themeModeState.IsDarkMode" />
+<MudThemeProvider IsDarkMode="IsDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider CloseButton="true" FullWidth="true" MaxWidth="MaxWidth.Large" />
 <MudSnackbarProvider />
+
+<MudIconButton Class="theme-toggle-button"
+               Icon="@(IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+               Color="Color.Default"
+               ButtonType="ButtonType.Button"
+               OnClick="ToggleDarkModeAsync" />
 
 @Body
 

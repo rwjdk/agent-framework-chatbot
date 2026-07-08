@@ -4,7 +4,7 @@ using ServiceDefaults.Models;
 
 namespace ChatBot.BlazorServerOnly.Models;
 
-public class State
+public class VisualState
 {
     public string? StreamedResponse { get; set; }
     public string? StreamedReasoning { get; set; }

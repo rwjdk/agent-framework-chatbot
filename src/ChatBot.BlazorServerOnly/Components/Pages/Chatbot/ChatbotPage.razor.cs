@@ -1,9 +1,9 @@
-﻿using AgentFrameworkToolkit.AzureOpenAI;
+using AgentFrameworkToolkit.AzureOpenAI;
+using AgentFrameworkToolkit.Tools;
 using AgentFrameworkToolkit.Tools.Common;
+using AgentFrameworkToolkit.Tools.ModelContextProtocol;
 using ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
-using ChatBot.BlazorServerOnly.Extensions;
-using ChatBot.BlazorServerOnly.Services;
-using ChatBot.BlazorServerOnly.Tools;
+using ChatBot.BlazorServerOnly.Models;
 using JetBrains.Annotations;
 using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Components;
@@ -12,12 +12,12 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.AI;
 using Microsoft.JSInterop;
+using ModelContextProtocol.Client;
 using MudBlazor;
-using AgentFrameworkToolkit.Tools;
-using AgentFrameworkToolkit.Tools.ModelContextProtocol;
-using ChatBot.BlazorServerOnly.Models;
+using ServiceDefaults.Extensions;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
+using ServiceDefaults.Tools;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot;
 
@@ -28,26 +28,19 @@ public partial class ChatbotPage(
     ConversationsService conversationsService,
     AgentService agentService,
     SettingsService settingsService,
-    FileUploadStorageService fileUploadStorageService,
+    BlobStorageService blobStorageService,
     ConversationChatMessageMapper conversationChatMessageMapper,
     AuthenticationStateProvider authenticationStateProvider,
     OpenWeatherMapOptions openWeatherMapOptions,
-    ThemeModeState themeModeState,
     IJSRuntime jsRuntime,
     IDialogService dialogService,
     ISnackbar snackbar) : IAsyncDisposable
 {
-    //Input and Conversation
     private readonly UserInput _userInput = new();
-    private readonly State _state = new();
-
-
+    private readonly VisualState _visualState = new();
     private string _userId = string.Empty;
     private Conversation _conversation = Conversation.NewConversation(string.Empty);
     private Settings? _settings;
-
-    //Streaming and temp values
-    
 
     //Components
     private LeftSidebar? _leftSidebar;
@@ -61,40 +54,102 @@ public partial class ChatbotPage(
         _userId = authenticationState.User.GetUserId();
         _settings = await settingsService.LoadAsync(_userId);
         _conversation = Conversation.NewConversation(_userId);
-        await themeModeState.InitializeAsync();
     }
 
     private async Task SendAsync()
     {
-        if (_state.IsSendingMessage)
-        {
-            return;
-        }
-
-        string? input = _userInput.Text?.Trim();
-
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return;
-        }
-
-        _state.IsSendingMessage = true;
-        await InvokeAsync(StateHasChanged);
+        List<McpClientTools> mcpClientTools = [];
         try
         {
+            if (_visualState.IsSendingMessage || _settings == null)
+            {
+                return;
+            }
+
+            string? input = _userInput.Text?.Trim();
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return;
+            }
+
+            _visualState.IsSendingMessage = true;
+            await InvokeAsync(StateHasChanged);
+
+            //Title
             if (_conversation.MissingATitle)
             {
                 _conversation.Title = await agentService.GenerateTitleAsync(input);
                 _leftSidebar?.AddConversation(_conversation);
             }
 
-            List<ConversationAttachment> attachments = await SavePendingFilesAsync();
-            ResetMidTurnValues();
-            _state.MemoryUpdate = null;
+            //Attachments
+            List<ConversationAttachment> attachments = [];
+            foreach (UserInputAttachment file in _userInput.Attachments)
+            {
+                attachments.Add(await blobStorageService.SaveAsync(_userId, file.FileName, file.ContentType, file.Bytes));
+            }
+
+            //Reset GUI so it is ready for new message
+            _userInput.Reset();
+            _visualState.MemoryUpdate = null;
             _conversation.AddUserMessage(input, attachments);
             await InvokeAsync(StateHasChanged);
             await ScrollMessagesToBottomAsync();
-            await AnswerAsync();
+
+            //Prepare Regular Tools
+            List<AITool> tools =
+            [
+                WeatherTools.GetWeatherForCity(openWeatherMapOptions),
+                ..aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, _conversation, blobStorageService)),
+                ..TimeTools.All()
+            ];
+
+            //Prepare MCP Tools (and convert to regular tools)
+            foreach (McpServer mcpServer in _settings.McpServers)
+            {
+                McpClientTools mcpClientTool = await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers);
+                mcpClientTools.Add(mcpClientTool);
+                tools.AddRange(mcpClientTool.Tools);
+            }
+
+            //LLM Work
+            AIAgent agent = agentService.GetMainAgent(_userId, tools, _settings.Instructions, MemoryUpdateNotificationAsync); //todo... own more of tool-generation?
+            List<ChatMessage> chatMessagesToSend = await conversationChatMessageMapper.ToChatMessagesAsync(_conversation);
+            AgentResponse response;
+            if (_settings.Streaming)
+            {
+                List<AgentResponseUpdate> updates = [];
+                await foreach (AgentResponseUpdate update in agent.RunStreamingAsync(chatMessagesToSend))
+                {
+                    updates.Add(update);
+                    foreach (AIContent content in update.Contents)
+                    {
+                        switch (content)
+                        {
+                            case TextReasoningContent textReasoningContent:
+                                _visualState.StreamedReasoning += textReasoningContent.Text;
+                                break;
+                            default:
+                                _visualState.StreamedContents.Add(content);
+                                break;
+                        }
+                    }
+
+                    _visualState.StreamedResponse += update.Text;
+                    await InvokeAsync(StateHasChanged);
+                }
+
+                _visualState.ResetStreamingValues();
+                response = updates.ToAgentResponse();
+            }
+            else
+            {
+                response = await agent.RunAsync(chatMessagesToSend);
+            }
+            _conversation.AddDataFromAgentResponse(response);
+
+            //Store the new conversation
             await conversationsService.StoreConversationAsync(_conversation);
         }
         catch (Exception exception)
@@ -104,64 +159,20 @@ public partial class ChatbotPage(
         }
         finally
         {
-            _state.IsSendingMessage = false;
+            _visualState.IsSendingMessage = false;
             await InvokeAsync(StateHasChanged);
-        }
-    }
 
-    private async Task AnswerAsync()
-    {
-        if (_settings is null)
-        {
-            return;
-        }
-
-        List<AITool> tools =
-        [
-            AIFunctionFactory.Create(new ImageGenerationTool(azureOpenAIAgentFactory, _conversation).GenerateImageAsync, "generate_image"),
-            WeatherTools.GetWeatherForCity(openWeatherMapOptions)
-        ];
-
-        List<McpClientTools> mcpClientToolsList = await AddMcpToolsAsync();
-        foreach (McpClientTools mcpClientTools in mcpClientToolsList)
-        {
-            tools.AddRange(mcpClientTools.Tools);
-        }
-
-        AIAgent agent = agentService.GetMainAgent(_userId, tools, _settings.Instructions, MemoryUpdateNotificationAsync); //todo... own more of tool-generation?
-
-        if (!_settings.Streaming)
-        {
-            await GenerateNonStreamingResponseAsync(agent);
-        }
-        else
-        {
-            await GenerateStreamingResponseAsync(agent);
-        }
-
-        //MCP Tools Cleanup
-        foreach (McpClientTools mcpClientTools in mcpClientToolsList)
-        {
-            await mcpClientTools.McpClient.DisposeAsync();
-        }
-    }
-
-    private async Task<List<McpClientTools>> AddMcpToolsAsync()
-    {
-        List<McpClientTools> mcpTools = [];
-        if (_settings != null)
-        {
-            foreach (McpServer mcpServer in _settings.McpServers)
+            //MCP Tools Cleanup
+            foreach (McpClientTools mcpClientTool in mcpClientTools)
             {
-                mcpTools.Add(await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers));
+                await mcpClientTool.McpClient.DisposeAsync();
             }
         }
-        return mcpTools;
     }
 
     private async Task MemoryUpdateNotificationAsync(MemoryUpdate obj)
     {
-        _state.MemoryUpdate = obj;
+        _visualState.MemoryUpdate = obj;
         if (_settings is not null)
         {
             foreach (string memoryToRemove in obj.MemoryToRemove)
@@ -169,76 +180,27 @@ public partial class ChatbotPage(
                 _settings.UserMemories.Remove(memoryToRemove);
             }
 
-            foreach (string memoryToAdd in obj.MemoryToAdd)
+            foreach (string memoryToAdd in obj.MemoryToAdd.Where(x => !_settings.UserMemories.Contains(x)))
             {
-                if (!_settings.UserMemories.Contains(memoryToAdd))
-                {
-                    _settings.UserMemories.Add(memoryToAdd);
-                }
+                _settings.UserMemories.Add(memoryToAdd);
             }
         }
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task GenerateNonStreamingResponseAsync(AIAgent agent)
-    {
-        List<ChatMessage> chatMessages = await conversationChatMessageMapper.ToChatMessagesAsync(_conversation);
-        AgentResponse response = await agent.RunAsync(chatMessages);
-        _conversation.AddDataFromAgentResponse(response);
-    }
-
-    private async Task GenerateStreamingResponseAsync(AIAgent agent)
-    {
-        List<AgentResponseUpdate> updates = [];
-        List<ChatMessage> chatMessages = await conversationChatMessageMapper.ToChatMessagesAsync(_conversation);
-        await foreach (AgentResponseUpdate update in agent.RunStreamingAsync(chatMessages))
-        {
-            updates.Add(update);
-            foreach (AIContent content in update.Contents)
-            {
-                switch (content)
-                {
-                    case TextReasoningContent textReasoningContent:
-                        _state.StreamedReasoning += textReasoningContent.Text;
-                        break;
-                    default:
-                        _state.StreamedContents.Add(content);
-                        break;
-                }
-            }
-
-            _state.StreamedResponse += update.Text;
-            await InvokeAsync(StateHasChanged);
-        }
-
-        ResetMidTurnValues();
-        AgentResponse response = updates.ToAgentResponse();
-        _conversation.AddDataFromAgentResponse(response);
-    }
-
     private void NewChat()
     {
-        if (_state.IsSendingMessage)
-        {
-            return;
-        }
-
         _conversation = Conversation.NewConversation(_userId);
-        ResetMidTurnValues();
-        _state.MemoryUpdate = null;
+        _userInput.Reset();
+        _visualState.MemoryUpdate = null;
     }
 
     private void SwitchSession(Conversation conversation)
     {
-        if (_state.IsSendingMessage)
-        {
-            return;
-        }
-
         _conversation = conversation;
-        ResetMidTurnValues();
-        _state.MemoryUpdate = null;
+        _userInput.Reset();
+        _visualState.MemoryUpdate = null;
     }
 
     private void RemoveSession(Conversation conversation)
@@ -249,39 +211,9 @@ public partial class ChatbotPage(
         }
     }
 
-    private async Task ToggleDarkModeAsync()
-    {
-        if (_state.IsSendingMessage)
-        {
-            return;
-        }
-
-        await themeModeState.ToggleAsync();
-    }
-
-    private string GetThemeToggleIcon()
-    {
-        if (themeModeState.IsDarkMode)
-        {
-            return Icons.Material.Filled.LightMode;
-        }
-
-        return Icons.Material.Filled.DarkMode;
-    }
-
-    private string GetThemeToggleText()
-    {
-        if (themeModeState.IsDarkMode)
-        {
-            return "Switch to light mode";
-        }
-
-        return "Switch to dark mode";
-    }
-
     private async Task OpenSettingsDialogAsync()
     {
-        if (_state.IsSendingMessage || _settings is null)
+        if (_visualState.IsSendingMessage || _settings is null)
         {
             return;
         }
@@ -314,8 +246,8 @@ public partial class ChatbotPage(
     {
         _settings = null;
         _conversation = Conversation.NewConversation(_userId);
-        ResetMidTurnValues();
-        _state.MemoryUpdate = null;
+        _userInput.Reset();
+        _visualState.MemoryUpdate = null;
         await InvokeAsync(StateHasChanged);
         _settings = await settingsService.LoadAsync(_userId);
     }
@@ -340,7 +272,7 @@ public partial class ChatbotPage(
 
     private async Task HandleComposerKeyDownAsync(KeyboardEventArgs args)
     {
-        if (!_state.IsSendingMessage && args is { Key: "Enter", ShiftKey: false })
+        if (!_visualState.IsSendingMessage && args is { Key: "Enter", ShiftKey: false })
         {
             await SendAsync();
         }
@@ -369,27 +301,27 @@ public partial class ChatbotPage(
 
     private async Task ToggleRecordingAsync()
     {
-        if (_state.IsSendingMessage)
+        if (_visualState.IsSendingMessage)
         {
             return;
         }
 
         _audioRecorderModule ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", "/chatbotAudioRecorder.js");
 
-        if (!_state.IsRecordingAudio)
+        if (!_visualState.IsRecordingAudio)
         {
             //Start Recording
             await _audioRecorderModule.InvokeVoidAsync("startRecording");
-            _state.IsRecordingAudio = true;
+            _visualState.IsRecordingAudio = true;
         }
         else
         {
             //Stop Recording (and transcribe)
-            _state.IsTranscribingAudio = true;
+            _visualState.IsTranscribingAudio = true;
             try
             {
                 RecordedAudio? recordedAudio = await _audioRecorderModule.InvokeAsync<RecordedAudio?>("stopRecording");
-                _state.IsRecordingAudio = false;
+                _visualState.IsRecordingAudio = false;
 
                 if (recordedAudio is null)
                 {
@@ -400,14 +332,14 @@ public partial class ChatbotPage(
                     await using Stream audioStream = await audioStreamReference.OpenReadStreamAsync();
 
                     string transcription = await agentService.GenerateTranscriptionAsync(audioStream, recordedAudio.FileName);
-                    
+
                     _userInput.Text = string.IsNullOrWhiteSpace(_userInput.Text) ? transcription : $"{_userInput.Text.TrimEnd()} {transcription}";
                 }
             }
             finally
             {
-                _state.IsRecordingAudio = false;
-                _state.IsTranscribingAudio = false;
+                _visualState.IsRecordingAudio = false;
+                _visualState.IsTranscribingAudio = false;
             }
         }
     }
@@ -418,30 +350,13 @@ public partial class ChatbotPage(
         await _scrollModule.InvokeVoidAsync("scrollToBottom", _chatMessagesElement);
     }
 
-    private async Task<List<ConversationAttachment>> SavePendingFilesAsync()
-    {
-        List<ConversationAttachment> attachments = [];
-        foreach (UserInputAttachment file in _userInput.Attachments)
-        {
-            attachments.Add(await fileUploadStorageService.SaveAsync(_userId, file.FileName, file.ContentType, file.Bytes));
-        }
-
-        return attachments;
-    }
-    
-    private void ResetMidTurnValues()
-    {
-        _userInput.Reset();
-        _state.ResetStreamingValues();
-    }
-
     public async ValueTask DisposeAsync()
     {
         try
         {
             if (_audioRecorderModule is not null)
             {
-                if (_state.IsRecordingAudio)
+                if (_visualState.IsRecordingAudio)
                 {
                     await _audioRecorderModule.InvokeVoidAsync("cancelRecording");
                 }
