@@ -1,9 +1,9 @@
-using System.Text;
-using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Newtonsoft.Json;
 
-namespace ChatBot.BlazorServerOnly.Models;
+namespace ServiceDefaults.Models;
 
 public class Conversation
 {
@@ -16,9 +16,12 @@ public class Conversation
         };
     }
 
-    public List<ConversationMessage> Messages { get; init; } = [];
+    public List<ConversationMessage> Messages { get; [UsedImplicitly] init; } = [];
 
+    [JsonProperty("id")]
     public required Guid Id { get; init; }
+
+    [JsonProperty("userId")]
     public string UserId { get; init; } = string.Empty;
     public string? Title { get; set; }
 
@@ -47,16 +50,5 @@ public class Conversation
             });
         }
         Messages.LastOrDefault()?.Usage = response.Usage;
-    }
-
-    public string GetAsImageGenerationPrompt()
-    {
-        StringBuilder prompt = new();
-        foreach (ConversationMessage message in Messages)
-        {
-            prompt.AppendLine($"<message role=\"{message.Role}\">{message.Text}</message>");
-        }
-
-        return prompt.ToString();
     }
 }

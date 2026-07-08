@@ -9,7 +9,7 @@
 }
 @code 
 {
-    private static readonly Markdig.MarkdownPipeline MarkdownPipeline = new Markdig.MarkdownPipelineBuilder()
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .DisableHtml()
         .Build();
@@ -19,6 +19,6 @@
 
     private static MarkupString RenderMarkdown(string text)
     {
-        return new(Markdig.Markdown.ToHtml(text, MarkdownPipeline));
+        return new(Markdown.ToHtml(text, MarkdownPipeline));
     }
 }

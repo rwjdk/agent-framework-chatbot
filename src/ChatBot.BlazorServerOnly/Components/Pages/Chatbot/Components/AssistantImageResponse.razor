@@ -1,4 +1,5 @@
-﻿@if (!string.IsNullOrWhiteSpace(Message.ImagePath))
+﻿@using ServiceDefaults.Models
+@if (!string.IsNullOrWhiteSpace(Message.ImagePath))
 {
     <article class="message-row from-assistant">
         <button type="button" class="chat-image-button assistant-image-button" @onclick="OpenImagePreviewAsync">

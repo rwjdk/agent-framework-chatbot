@@ -1,15 +1,18 @@
 using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.Tools;
 using AgentFrameworkToolkit.Tools.Common;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using ServiceDefaults;
+using ServiceDefaults.Constants;
+using ServiceDefaults.Services;
 
 #pragma warning disable IDE0130
 // ReSharper disable once CheckNamespace
@@ -23,6 +26,7 @@ public static class Extensions
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
 
+    // ReSharper disable once UnusedMethodReturnValue.Global
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         //Agent Framework Toolkit Initialization
@@ -36,6 +40,13 @@ public static class Extensions
         //Tools Factory (MCP)
         builder.Services.AddAIToolFactory();
 
+        //Cosmos DB
+        string? cosmosDbConnectionString = builder.Configuration[SecretKeys.CosmosDbConnectionString];
+        if (!string.IsNullOrWhiteSpace(cosmosDbConnectionString))
+        {
+            builder.Services.AddSingleton(new CosmosClient(cosmosDbConnectionString));
+        }
+
         //Open Weather Map Setup
         string? weatherServiceKey = builder.Configuration[SecretKeys.WeatherServiceKey];
         if (weatherServiceKey != null)
@@ -45,6 +56,12 @@ public static class Extensions
                 ApiKey = weatherServiceKey
             });
         }
+
+        //Other Services
+        builder.Services.AddSingleton<AgentService>();
+        builder.Services.AddSingleton<ConversationsService>();
+        builder.Services.AddSingleton<ImageGenerationService>();
+        builder.Services.AddSingleton<SettingsService>();
 
         builder.ConfigureOpenTelemetry();
 
@@ -72,6 +89,7 @@ public static class Extensions
         return builder;
     }
 
+    [PublicAPI]
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.Logging.AddOpenTelemetry(logging =>
@@ -90,6 +108,7 @@ public static class Extensions
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
+                    // ReSharper disable once VariableHidesOuterVariable
                     .AddAspNetCoreInstrumentation(tracing =>
                         // Exclude health check requests from tracing
                         tracing.Filter = context =>
@@ -106,6 +125,7 @@ public static class Extensions
         return builder;
     }
 
+    // ReSharper disable once UnusedMethodReturnValue.Local
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         bool useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
@@ -125,6 +145,7 @@ public static class Extensions
         return builder;
     }
 
+    [PublicAPI]
     public static TBuilder AddDefaultHealthChecks<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.Services.AddHealthChecks()
@@ -134,6 +155,7 @@ public static class Extensions
         return builder;
     }
 
+    [PublicAPI]
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
         // Adding health checks endpoints to applications in non-development environments has security implications.

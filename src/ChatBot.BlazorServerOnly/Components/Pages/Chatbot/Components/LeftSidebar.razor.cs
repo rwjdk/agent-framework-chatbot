@@ -1,8 +1,8 @@
-﻿using ChatBot.BlazorServerOnly.Models;
-using ChatBot.BlazorServerOnly.Services;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using ServiceDefaults.Models;
+using ServiceDefaults.Services;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 
@@ -66,8 +66,7 @@ public partial class LeftSidebar(ConversationsService conversationsService, IDia
         }
 
         _openConversationMenuId = null;
-        DialogParameters<RenameConversationDialog> parameters = new();
-        parameters.Add(x => x.Title, conversation.Title ?? string.Empty);
+        DialogParameters<RenameConversationDialog> parameters = new() { { x => x.Title, conversation.Title ?? string.Empty } };
 
         DialogOptions options = new()
         {
@@ -113,7 +112,7 @@ public partial class LeftSidebar(ConversationsService conversationsService, IDia
             return;
         }
 
-        conversationsService.DeleteConversation(conversation.Id);
+        await conversationsService.DeleteConversationAsync(UserId, conversation.Id);
         _conversations.Remove(conversation);
         await OnConversationDeleted.InvokeAsync(conversation);
     }

@@ -1,237 +1,275 @@
 <MudDialog Class="settings-dialog">
     <DialogContent>
-        <div class="settings-dialog-layout">
-            <aside class="settings-dialog-sidebar">
-                <MudStack Spacing="1">
-                    <MudButton Class="@GetSectionButtonClass(SettingsSection.Chat)"
-                               Variant="@GetSectionButtonVariant(SettingsSection.Chat)"
-                               Color="@GetSectionButtonColor(SettingsSection.Chat)"
-                               FullWidth="true"
-                               StartIcon="@Icons.Material.Filled.Tune"
-                               OnClick="() => SelectSection(SettingsSection.Chat)">
-                        Chat
-                    </MudButton>
-                    <MudButton Class="@GetSectionButtonClass(SettingsSection.Instructions)"
-                               Variant="@GetSectionButtonVariant(SettingsSection.Instructions)"
-                               Color="@GetSectionButtonColor(SettingsSection.Instructions)"
-                               FullWidth="true"
-                               StartIcon="@Icons.Material.Filled.EditNote"
-                               OnClick="() => SelectSection(SettingsSection.Instructions)">
-                        Instructions
-                    </MudButton>
-                    <MudButton Class="@GetSectionButtonClass(SettingsSection.Memories)"
-                               Variant="@GetSectionButtonVariant(SettingsSection.Memories)"
-                               Color="@GetSectionButtonColor(SettingsSection.Memories)"
-                               FullWidth="true"
-                               StartIcon="@Icons.Material.Filled.Memory"
-                               OnClick="() => SelectSection(SettingsSection.Memories)">
-                        Memories
-                    </MudButton>
-                    <MudButton Class="@GetSectionButtonClass(SettingsSection.McpServers)"
-                               Variant="@GetSectionButtonVariant(SettingsSection.McpServers)"
-                               Color="@GetSectionButtonColor(SettingsSection.McpServers)"
-                               FullWidth="true"
-                               StartIcon="@Icons.Material.Filled.Hub"
-                               OnClick="() => SelectSection(SettingsSection.McpServers)">
-                        MCP Servers
-                    </MudButton>
-                </MudStack>
-            </aside>
+        @if (_settings is not null)
+        {
+            <div class="settings-dialog-layout">
+                <aside class="settings-dialog-sidebar">
+                    <MudStack Spacing="1">
+                        <MudButton Class="@GetSectionButtonClass(SettingsSection.Chat)"
+                                   Variant="@GetSectionButtonVariant(SettingsSection.Chat)"
+                                   Color="@GetSectionButtonColor(SettingsSection.Chat)"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Tune"
+                                   OnClick="() => SelectSection(SettingsSection.Chat)">
+                            Chat
+                        </MudButton>
+                        <MudButton Class="@GetSectionButtonClass(SettingsSection.Instructions)"
+                                   Variant="@GetSectionButtonVariant(SettingsSection.Instructions)"
+                                   Color="@GetSectionButtonColor(SettingsSection.Instructions)"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.EditNote"
+                                   OnClick="() => SelectSection(SettingsSection.Instructions)">
+                            Instructions
+                        </MudButton>
+                        <MudButton Class="@GetSectionButtonClass(SettingsSection.Memories)"
+                                   Variant="@GetSectionButtonVariant(SettingsSection.Memories)"
+                                   Color="@GetSectionButtonColor(SettingsSection.Memories)"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Memory"
+                                   OnClick="() => SelectSection(SettingsSection.Memories)">
+                            Memories
+                        </MudButton>
+                        <MudButton Class="@GetSectionButtonClass(SettingsSection.McpServers)"
+                                   Variant="@GetSectionButtonVariant(SettingsSection.McpServers)"
+                                   Color="@GetSectionButtonColor(SettingsSection.McpServers)"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Hub"
+                                   OnClick="() => SelectSection(SettingsSection.McpServers)">
+                            Integrations
+                        </MudButton>
+                        <MudButton Class="@GetSectionButtonClass(SettingsSection.DangerZone)"
+                                   Variant="@GetSectionButtonVariant(SettingsSection.DangerZone)"
+                                   Color="Color.Error"
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Warning"
+                                   OnClick="() => SelectSection(SettingsSection.DangerZone)">
+                            Danger Zone
+                        </MudButton>
+                    </MudStack>
+                </aside>
 
-            <section class="settings-dialog-content">
-                @switch (_selectedSection)
-                {
-                    case SettingsSection.Chat:
-                        <MudStack Spacing="3">
-                            <MudText Typo="Typo.h6">Chat</MudText>
-                            <MudSwitch T="bool"
-                                       Value="Streaming"
-                                       ValueChanged="SetStreamingAsync"
-                                       Label="Streaming"
-                                       Color="Color.Primary" />
-                            <MudSelect T="ImageGenStyle"
-                                       Label="Image generation"
-                                       Value="SelectedImageGenStyle"
-                                       ValueChanged="SetImageGenStyleAsync"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense"
-                                       FullWidth="true">
-                                <MudSelectItem Value="@ImageGenStyle.RouterAgent">RouterAgent</MudSelectItem>
-                                <MudSelectItem Value="@ImageGenStyle.ImageGenAsTool">ImageGenAsTool</MudSelectItem>
-                            </MudSelect>
-                        </MudStack>
-                        break;
-                    case SettingsSection.Instructions:
-                        <MudStack Spacing="3">
-                            <MudText Typo="Typo.h6">Instructions</MudText>
-                            <MudTextField T="string"
-                                          @bind-Value="_customInstructions"
-                                          Label="Custom Instructions"
-                                          Lines="8"
-                                          Variant="Variant.Outlined"
-                                          Margin="Margin.Dense"
-                                          FullWidth="true" />
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.Save"
-                                       OnClick="SaveCustomInstructions">
-                                Save
-                            </MudButton>
-                        </MudStack>
-                        break;
-                    case SettingsSection.Memories:
-                        <MudStack Spacing="3">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.h6">Memories</MudText>
+                <section class="settings-dialog-content">
+                    @switch (_selectedSection)
+                    {
+                        case SettingsSection.Chat:
+                            <MudStack Spacing="3">
+                                <MudText Typo="Typo.h6">Chat</MudText>
+                                <MudSwitch T="bool"
+                                           @bind-Value="_settings.Streaming"
+                                           Label="Streaming"
+                                           Color="Color.Primary" />
+                                <MudSwitch T="bool"
+                                           @bind-Value="_settings.ShowReasoning"
+                                           Label="Show reasoning"
+                                           Color="Color.Primary" />
+                                <MudSwitch T="bool"
+                                           @bind-Value="_settings.ShowTokens"
+                                           Label="Show tokens"
+                                           Color="Color.Primary" />
+                                <MudSwitch T="bool"
+                                           @bind-Value="_settings.ShowToolCalls"
+                                           Label="Show tool calls"
+                                           Color="Color.Primary" />
+                                <MudSwitch T="bool"
+                                           @bind-Value="_settings.ShowMemoryUpdate"
+                                           Label="Show memory updates"
+                                           Color="Color.Primary" />
                                 <MudButton Variant="Variant.Filled"
                                            Color="Color.Primary"
-                                           StartIcon="@Icons.Material.Filled.Add"
-                                           OnClick="AddMemory">
-                                    Memory
+                                           StartIcon="@Icons.Material.Filled.Save"
+                                           OnClick="SaveChatSettingsAsync">
+                                    Save
                                 </MudButton>
                             </MudStack>
-
-                            @if (!string.IsNullOrWhiteSpace(_memoryValidationMessage))
-                            {
-                                <MudAlert Severity="Severity.Error" Dense="true">@_memoryValidationMessage</MudAlert>
-                            }
-
-                            @if (_memories.Count == 0)
-                            {
-                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No memories saved.</MudAlert>
-                            }
-
-                            @for (int memoryIndex = 0; memoryIndex < _memories.Count; memoryIndex++)
-                            {
-                                int currentMemoryIndex = memoryIndex;
-                                MemoryEditor memory = _memories[currentMemoryIndex];
-                                <div class="memory-editor-row">
-                                    <MudTextField T="string"
-                                                  @bind-Value="memory.Value"
-                                                  Label="Memory"
-                                                  Lines="2"
-                                                  Variant="Variant.Outlined"
-                                                  Margin="Margin.Dense"
-                                                  FullWidth="true" />
-                                    <MudTooltip Text="Remove memory">
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                       Color="Color.Error"
-                                                       Size="Size.Small"
-                                                       OnClick="() => RemoveMemory(currentMemoryIndex)" />
-                                    </MudTooltip>
-                                </div>
-                            }
-
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.Save"
-                                       OnClick="SaveMemories">
-                                Save
-                            </MudButton>
-                        </MudStack>
-                        break;
-                    case SettingsSection.McpServers:
-                        <MudStack Spacing="3">
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.h6">MCP Servers</MudText>
+                            break;
+                        case SettingsSection.Instructions:
+                            <MudStack Spacing="3">
+                                <MudText Typo="Typo.h6">Instructions</MudText>
+                                <MudTextField T="string"
+                                              @bind-Value="_settings.Instructions"
+                                              Label="Custom Instructions"
+                                              Lines="8"
+                                              Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
+                                              FullWidth="true" />
                                 <MudButton Variant="Variant.Filled"
                                            Color="Color.Primary"
-                                           StartIcon="@Icons.Material.Filled.Add"
-                                           OnClick="AddMcpServer">
-                                    Server
+                                           StartIcon="@Icons.Material.Filled.Save"
+                                           OnClick="SaveInstructionsAsync">
+                                    Save
                                 </MudButton>
                             </MudStack>
+                            break;
+                        case SettingsSection.Memories:
+                            <MudStack Spacing="3">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.h6">Memories</MudText>
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Add"
+                                               OnClick="AddMemory">
+                                        Memory
+                                    </MudButton>
+                                </MudStack>
 
-                            @if (!string.IsNullOrWhiteSpace(_mcpValidationMessage))
-                            {
-                                <MudAlert Severity="Severity.Error" Dense="true">@_mcpValidationMessage</MudAlert>
-                            }
+                                @if (!string.IsNullOrWhiteSpace(_memoryValidationMessage))
+                                {
+                                    <MudAlert Severity="Severity.Error" Dense="true">@_memoryValidationMessage</MudAlert>
+                                }
 
-                            @if (_mcpServers.Count == 0)
-                            {
-                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No MCP servers configured.</MudAlert>
-                            }
+                                @if (_memories.Count == 0)
+                                {
+                                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No memories saved.</MudAlert>
+                                }
 
-                            @for (int serverIndex = 0; serverIndex < _mcpServers.Count; serverIndex++)
-                            {
-                                int currentServerIndex = serverIndex;
-                                McpServerEditor server = _mcpServers[currentServerIndex];
-                                <MudPaper Class="mcp-server-editor" Elevation="0" Outlined="true">
-                                    <MudStack Spacing="2">
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                            <MudText Typo="Typo.subtitle2">Server @(currentServerIndex + 1)</MudText>
-                                            <MudTooltip Text="Remove server">
-                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                               Color="Color.Error"
-                                                               Size="Size.Small"
-                                                               OnClick="() => RemoveMcpServer(currentServerIndex)" />
-                                            </MudTooltip>
-                                        </MudStack>
-
+                                @for (int memoryIndex = 0; memoryIndex < _memories.Count; memoryIndex++)
+                                {
+                                    int currentMemoryIndex = memoryIndex;
+                                    MemoryEditor memory = _memories[currentMemoryIndex];
+                                    <div class="memory-editor-row">
                                         <MudTextField T="string"
-                                                      @bind-Value="server.Name"
-                                                      Label="Name"
+                                                      @bind-Value="memory.Value"
+                                                      Label="Memory"
+                                                      Lines="2"
                                                       Variant="Variant.Outlined"
                                                       Margin="Margin.Dense"
                                                       FullWidth="true" />
-                                        <MudTextField T="string"
-                                                      @bind-Value="server.Url"
-                                                      Label="URL"
-                                                      Variant="Variant.Outlined"
-                                                      Margin="Margin.Dense"
-                                                      FullWidth="true" />
+                                        <MudTooltip Text="Remove memory">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                           Color="Color.Error"
+                                                           Size="Size.Small"
+                                                           OnClick="() => RemoveMemory(currentMemoryIndex)" />
+                                        </MudTooltip>
+                                    </div>
+                                }
 
-                                        <MudDivider />
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Save"
+                                           OnClick="SaveMemoriesAsync">
+                                    Save
+                                </MudButton>
+                            </MudStack>
+                            break;
+                        case SettingsSection.McpServers:
+                            <MudStack Spacing="3">
+                                <MudText Typo="Typo.h6">MCP servers</MudText>
+                                
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Add"
+                                               OnClick="AddMcpServer">
+                                        Server
+                                    </MudButton>
+                                </MudStack>
 
-                                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                                            <MudText Typo="Typo.subtitle2">Headers</MudText>
-                                            <MudButton Variant="Variant.Outlined"
-                                                       Color="Color.Default"
-                                                       Size="Size.Small"
-                                                       StartIcon="@Icons.Material.Filled.Add"
-                                                       OnClick="() => AddHeader(currentServerIndex)">
-                                                Header
-                                            </MudButton>
-                                        </MudStack>
+                                @if (!string.IsNullOrWhiteSpace(_mcpValidationMessage))
+                                {
+                                    <MudAlert Severity="Severity.Error" Dense="true">@_mcpValidationMessage</MudAlert>
+                                }
 
-                                        @for (int headerIndex = 0; headerIndex < server.Headers.Count; headerIndex++)
-                                        {
-                                            int currentHeaderIndex = headerIndex;
-                                            McpHeaderEditor header = server.Headers[currentHeaderIndex];
-                                            <div class="mcp-header-row">
-                                                <MudTextField T="string"
-                                                              @bind-Value="header.Key"
-                                                              Placeholder="Key"
-                                                              Variant="Variant.Outlined"
-                                                              Margin="Margin.Dense" />
-                                                <MudTextField T="string"
-                                                              @bind-Value="header.Value"
-                                                              Placeholder="Value"
-                                                              Variant="Variant.Outlined"
-                                                              Margin="Margin.Dense" />
-                                                <MudTooltip Text="Remove header">
-                                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                @if (_mcpServers.Count == 0)
+                                {
+                                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">No MCP servers configured.</MudAlert>
+                                }
+
+                                @for (int serverIndex = 0; serverIndex < _mcpServers.Count; serverIndex++)
+                                {
+                                    int currentServerIndex = serverIndex;
+                                    McpServerEditor server = _mcpServers[currentServerIndex];
+                                    <MudPaper Class="mcp-server-editor" Elevation="0" Outlined="true">
+                                        <MudStack Spacing="2">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                <MudText Typo="Typo.subtitle2">Server @(currentServerIndex + 1)</MudText>
+                                                <MudTooltip Text="Remove server">
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                                    Color="Color.Error"
                                                                    Size="Size.Small"
-                                                                   OnClick="() => RemoveHeader(currentServerIndex, currentHeaderIndex)" />
+                                                                   OnClick="() => RemoveMcpServer(currentServerIndex)" />
                                                 </MudTooltip>
-                                            </div>
-                                        }
-                                    </MudStack>
-                                </MudPaper>
-                            }
+                                            </MudStack>
 
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       StartIcon="@Icons.Material.Filled.Save"
-                                       OnClick="SaveMcpServers">
-                                Save
-                            </MudButton>
-                        </MudStack>
-                        break;
-                }
-            </section>
-        </div>
+                                            <MudTextField T="string"
+                                                          @bind-Value="server.Name"
+                                                          Label="Name"
+                                                          Variant="Variant.Outlined"
+                                                          Margin="Margin.Dense"
+                                                          FullWidth="true" />
+                                            <MudTextField T="string"
+                                                          @bind-Value="server.Url"
+                                                          Label="URL"
+                                                          Variant="Variant.Outlined"
+                                                          Margin="Margin.Dense"
+                                                          FullWidth="true" />
+
+                                            <MudDivider />
+
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                                <MudText Typo="Typo.subtitle2">Headers</MudText>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Color="Color.Default"
+                                                           Size="Size.Small"
+                                                           StartIcon="@Icons.Material.Filled.Add"
+                                                           OnClick="() => AddHeader(currentServerIndex)">
+                                                    Header
+                                                </MudButton>
+                                            </MudStack>
+
+                                            @for (int headerIndex = 0; headerIndex < server.Headers.Count; headerIndex++)
+                                            {
+                                                int currentHeaderIndex = headerIndex;
+                                                McpHeaderEditor header = server.Headers[currentHeaderIndex];
+                                                <div class="mcp-header-row">
+                                                    <MudTextField T="string"
+                                                                  @bind-Value="header.Key"
+                                                                  Placeholder="Key"
+                                                                  Variant="Variant.Outlined"
+                                                                  Margin="Margin.Dense" />
+                                                    <MudTextField T="string"
+                                                                  @bind-Value="header.Value"
+                                                                  Placeholder="Value"
+                                                                  InputType="InputType.Password"
+                                                                  Variant="Variant.Outlined"
+                                                                  Margin="Margin.Dense" />
+                                                    <MudTooltip Text="Remove header">
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                                       Color="Color.Error"
+                                                                       Size="Size.Small"
+                                                                       OnClick="() => RemoveHeader(currentServerIndex, currentHeaderIndex)" />
+                                                    </MudTooltip>
+                                                </div>
+                                            }
+                                        </MudStack>
+                                    </MudPaper>
+                                }
+
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Save"
+                                           OnClick="SaveIntegrationsAsync">
+                                    Save
+                                </MudButton>
+                            </MudStack>
+                            break;
+                        case SettingsSection.DangerZone:
+                            <MudStack Spacing="3">
+                                <MudText Typo="Typo.h6">Danger Zone</MudText>
+                                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                                    This permanently deletes your settings and conversations.
+                                </MudAlert>
+                                <MudButton Variant="Variant.Filled"
+                                           Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.DeleteForever"
+                                           OnClick="DeleteSettingsAndConversationsAsync">
+                                    Delete my Settings and Conversations
+                                </MudButton>
+                            </MudStack>
+                            break;
+                    }
+                </section>
+            </div>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseSettings">Close</MudButton>

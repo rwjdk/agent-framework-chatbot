@@ -1,3 +1,4 @@
+@using ServiceDefaults.Models
 @foreach (FunctionCallContent functionCallContent in Contents.OfType<FunctionCallContent>())
 {
     FunctionResultContent? functionResultContent = FindFunctionResultContent(functionCallContent.CallId);

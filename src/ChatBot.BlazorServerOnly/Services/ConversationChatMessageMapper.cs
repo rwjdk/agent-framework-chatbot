@@ -1,5 +1,5 @@
-using ChatBot.BlazorServerOnly.Models;
 using Microsoft.Extensions.AI;
+using ServiceDefaults.Models;
 
 namespace ChatBot.BlazorServerOnly.Services;
 

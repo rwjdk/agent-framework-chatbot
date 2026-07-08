@@ -1,31 +1,29 @@
-﻿@if (InImageGenerationMode)
-{
-    <article class="message-row from-assistant">
-        <p class="meta-info">Generating Image. Please wait...</p>
-    </article>
-}
-
-@if (Streaming)
+﻿@using ChatBot.BlazorServerOnly.Models
+@using ServiceDefaults.Models
+@if (Settings.Streaming)
 {
     if (IsWaitingForAssistant && !HasStreamedVisuals)
     {
         <AssistantProgress />
     }
 
-    if (StreamedReasoning != null)
+    if (Settings.ShowReasoning && State.StreamedReasoning != null)
     {
         <article class="message-row from-assistant">
             <div class="meta-info markdown-content">@RenderedStreamedReasoning</div>
         </article>
     }
 
-    <AssistantToolCallResponse Contents="StreamedContents" />
-
-    if (!string.IsNullOrEmpty(StreamedResponse))
+    if (Settings.ShowToolCalls)
+    {
+        <AssistantToolCallResponse Contents="State.StreamedContents"/>
+    }
+    
+    if (!string.IsNullOrEmpty(State.StreamedResponse))
     {
         <article class="message-row from-assistant">
             <div class="message-bubble">
-                <p class="message-text">@StreamedResponse</p>
+                <p class="message-text">@State.StreamedResponse</p>
             </div>
         </article>
     }
@@ -40,34 +38,25 @@ else
 }
 
 @code {
-    private static readonly Markdig.MarkdownPipeline MarkdownPipeline = new Markdig.MarkdownPipelineBuilder()
+    private static readonly MarkdownPipeline MarkdownPipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .DisableHtml()
         .Build();
 
     [Parameter, EditorRequired]
-    public bool Streaming { get; set; }
-
-    [Parameter, EditorRequired]
-    public bool InImageGenerationMode { get; set; }
+    public Settings Settings { get; set; }
 
     [Parameter, EditorRequired]
     public Conversation Conversation { get; set; }
 
     [Parameter, EditorRequired]
-    public IEnumerable<AIContent> StreamedContents { get; set; }
-    
-    [Parameter, EditorRequired]
-    public string? StreamedReasoning { get; set; }
-    
-    [Parameter, EditorRequired]
-    public string? StreamedResponse { get; set; }
+    public State State { get; set; }
 
-    private MarkupString RenderedStreamedReasoning => new(Markdig.Markdown.ToHtml(StreamedReasoning ?? string.Empty, MarkdownPipeline));
+    private MarkupString RenderedStreamedReasoning => new(Markdown.ToHtml(State.StreamedReasoning ?? string.Empty, MarkdownPipeline));
 
     private bool IsWaitingForAssistant => Conversation.Messages.LastOrDefault()?.Role == ChatRole.User;
 
-    private bool HasStreamedVisuals => !string.IsNullOrWhiteSpace(StreamedReasoning)
-                                      || !string.IsNullOrWhiteSpace(StreamedResponse)
-                                      || StreamedContents.Any();
+    private bool HasStreamedVisuals => !string.IsNullOrWhiteSpace(State.StreamedReasoning)
+                                      || !string.IsNullOrWhiteSpace(State.StreamedResponse)
+                                      || State.StreamedContents.Any();
 }

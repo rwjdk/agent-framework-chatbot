@@ -1,5 +1,5 @@
-using ChatBot.BlazorServerOnly.Models;
 using Microsoft.Extensions.AI;
+using ServiceDefaults.Models;
 
 namespace ChatBot.BlazorServerOnly.Services;
 
@@ -36,23 +36,13 @@ public class FileUploadStorageService(IWebHostEnvironment webHostEnvironment)
     {
         string safeFileName = Path.GetFileName(storedFileName);
         string filePath = Path.Combine(GetUploadFolder(userId), safeFileName);
-        if (!File.Exists(filePath))
-        {
-            return null;
-        }
-
-        return filePath;
+        return !File.Exists(filePath) ? null : filePath;
     }
 
     private string GetRequiredFilePath(string userId, string storedFileName)
     {
         string? filePath = GetFilePath(userId, storedFileName);
-        if (filePath is null)
-        {
-            throw new FileNotFoundException("Uploaded file was not found.", storedFileName);
-        }
-
-        return filePath;
+        return filePath ?? throw new FileNotFoundException("Uploaded file was not found.", storedFileName);
     }
 
     private string GetUploadFolder(string userId)
