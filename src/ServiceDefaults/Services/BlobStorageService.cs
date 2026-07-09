@@ -16,7 +16,7 @@ public class BlobStorageService(IConfiguration configuration) : IStorageService
     private const string GeneratedImagesContainerName = "generated-images";
     private readonly BlobServiceClient _blobServiceClient = new(GetRequiredConnectionString(configuration));
 
-    public async Task<ConversationAttachment> SaveAsync(string userId, string fileName, string contentType, byte[] bytes)
+    public async Task<ConversationAttachment> SaveAttachmentAsync(string userId, string fileName, string contentType, byte[] bytes)
     {
         string storedFileName = $"{Guid.CreateVersion7()}{Path.GetExtension(fileName)}";
         string blobName = GetAttachmentBlobName(userId, storedFileName);

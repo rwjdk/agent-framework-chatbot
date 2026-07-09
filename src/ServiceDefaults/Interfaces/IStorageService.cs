@@ -5,7 +5,7 @@ namespace ServiceDefaults.Interfaces;
 
 public interface IStorageService
 {
-    Task<ConversationAttachment> SaveAsync(string userId, string fileName, string contentType, byte[] bytes);
+    Task<ConversationAttachment> SaveAttachmentAsync(string userId, string fileName, string contentType, byte[] bytes);
     Task<DataContent> CreateDataContentAsync(ConversationAttachment attachment);
     Task<StoredFile?> GetAttachmentAsync(string userId, string fileName);
     Task<string> SaveGeneratedImageAsync(string userId, string contentType, ReadOnlyMemory<byte> data);

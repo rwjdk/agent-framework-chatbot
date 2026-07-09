@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.AI;
 using Microsoft.JSInterop;
-using ModelContextProtocol.Client;
 using MudBlazor;
 using ServiceDefaults.Extensions;
 using ServiceDefaults.Interfaces;
@@ -88,7 +87,7 @@ public partial class ChatbotPage(
             List<ConversationAttachment> attachments = [];
             foreach (UserInputAttachment file in _userInput.Attachments)
             {
-                attachments.Add(await storageService.SaveAsync(_userId, file.FileName, file.ContentType, file.Bytes));
+                attachments.Add(await storageService.SaveAttachmentAsync(_userId, file.FileName, file.ContentType, file.Bytes));
             }
 
             //Reset GUI so it is ready for new message
@@ -115,7 +114,7 @@ public partial class ChatbotPage(
             }
 
             //LLM Work
-            AIAgent agent = agentService.GetMainAgent(_userId, tools, _settings.Instructions, MemoryUpdateNotificationAsync); //todo... own more of tool-generation?
+            AIAgent agent = agentService.GetMainAgent(_userId, tools, _settings.Instructions, MemoryUpdateNotificationAsync);
             List<ChatMessage> chatMessagesToSend = await conversationChatMessageMapper.ToChatMessagesAsync(_conversation);
             AgentResponse response;
             if (_settings.Streaming)
@@ -176,12 +175,12 @@ public partial class ChatbotPage(
         _visualState.MemoryUpdate = obj;
         if (_settings is not null)
         {
-            foreach (string memoryToRemove in obj.MemoryToRemove)
+            foreach (string memoryToRemove in obj.MemoryToRemove ?? [])
             {
                 _settings.UserMemories.Remove(memoryToRemove);
             }
 
-            foreach (string memoryToAdd in obj.MemoryToAdd.Where(x => !_settings.UserMemories.Contains(x)))
+            foreach (string memoryToAdd in obj.MemoryToAdd?.Where(x => !_settings.UserMemories.Contains(x)) ?? [])
             {
                 _settings.UserMemories.Add(memoryToAdd);
             }

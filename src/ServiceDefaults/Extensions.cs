@@ -60,7 +60,8 @@ public static class Extensions
 
         //Other Services
         builder.Services.AddSingleton<AgentService>();
-        builder.Services.AddSingleton<IStorageService, BlobStorageService>();
+        builder.Services.AddSingleton<IStorageService, FileStorageService>();
+        //builder.Services.AddSingleton<IStorageService, BlobStorageService>();
         builder.Services.AddSingleton<IConversationsService, CosmosDbConversationsService>();
         builder.Services.AddSingleton<ImageGenerationService>();
         builder.Services.AddSingleton<ISettingsService, CosmosDbSettingsService>();

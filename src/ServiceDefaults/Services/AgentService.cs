@@ -35,7 +35,6 @@ public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISett
 
     public async Task<MemoryUpdate> GetMemoryUpdatesAsync(List<ChatMessage> inputToMemoryExtractor)
     {
-        //todo: Better prompt engineering
         AzureOpenAIAgent agent = azureOpenAIAgentFactory.CreateAgent(new AgentOptions
         {
             Model = AIModelIds.MemoryModel,

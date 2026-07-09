@@ -1,18 +1,19 @@
 using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.Tools;
+using JetBrains.Annotations;
 using Microsoft.Extensions.AI;
 using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
-using IStorageService = ServiceDefaults.Interfaces.IStorageService;
 
 #pragma warning disable MEAI001
 
 namespace ServiceDefaults.Tools;
 
-public class ImageGenerationTool(AzureOpenAIAgentFactory azureOpenAIAgentFactory, Conversation conversation, IStorageService storageService) //todo: can this be done better to support dependency injection?
+public class ImageGenerationTool(AzureOpenAIAgentFactory azureOpenAIAgentFactory, Conversation conversation, IStorageService storageService)
 {
     [AITool("generate_image", "Generate an Image")]
+    [UsedImplicitly]
     public async Task<string> GenerateImageAsync(string prompt)
     {
         ImageGenerationResponse imageGenerationResponse = await new ImageGenerationService(azureOpenAIAgentFactory).GenerateAsync(prompt);
