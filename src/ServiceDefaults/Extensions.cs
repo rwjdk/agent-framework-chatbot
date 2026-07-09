@@ -1,5 +1,6 @@
 using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.Tools;
+using System.Text.Json;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -55,7 +56,12 @@ public static class Extensions
             }
             else
             {
-                builder.Services.AddSingleton(new CosmosClient(cosmosDbConnectionString));
+                builder.Services.AddSingleton(new CosmosClient(
+                    cosmosDbConnectionString,
+                    new CosmosClientOptions
+                    {
+                        UseSystemTextJsonSerializerWithOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+                    }));
                 builder.Services.AddSingleton<IConversationsService, CosmosDbConversationsService>();
                 builder.Services.AddSingleton<ISettingsService, CosmosDbSettingsService>();
             }
