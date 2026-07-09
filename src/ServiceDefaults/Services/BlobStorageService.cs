@@ -5,11 +5,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.AI;
 using ServiceDefaults.Constants;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 
 namespace ServiceDefaults.Services;
 
-public class BlobStorageService(IConfiguration configuration)
+public class BlobStorageService(IConfiguration configuration) : IStorageService
 {
     private const string AttachmentsContainerName = "attachments";
     private const string GeneratedImagesContainerName = "generated-images";
@@ -33,15 +34,15 @@ public class BlobStorageService(IConfiguration configuration)
 
     public async Task<DataContent> CreateDataContentAsync(ConversationAttachment attachment)
     {
-        BlobFile blobFile = await DownloadAttachmentAsync(attachment.UserId, attachment.StoredFileName);
+        StoredFile blobFile = await DownloadAttachmentAsync(attachment.UserId, attachment.StoredFileName);
         byte[] fileBytes = blobFile.Bytes;
         string dataUri = $"data:{attachment.ContentType};base64,{Convert.ToBase64String(fileBytes)}";
         return new DataContent(dataUri, attachment.ContentType);
     }
 
-    public async Task<BlobFile?> GetAttachmentAsync(string userId, string storedFileName)
+    public async Task<StoredFile?> GetAttachmentAsync(string userId, string fileName)
     {
-        string safeFileName = Path.GetFileName(storedFileName);
+        string safeFileName = Path.GetFileName(fileName);
         string blobName = GetAttachmentBlobName(userId, safeFileName);
         return await DownloadAsync(AttachmentsContainerName, blobName);
     }
@@ -54,29 +55,29 @@ public class BlobStorageService(IConfiguration configuration)
         return $"/generated-images/{fileName}";
     }
 
-    public async Task<BlobFile?> GetGeneratedImageAsync(string userId, string storedFileName)
+    public async Task<StoredFile?> GetGeneratedImageAsync(string userId, string fileName)
     {
-        string safeFileName = Path.GetFileName(storedFileName);
+        string safeFileName = Path.GetFileName(fileName);
         string blobName = GetUserScopedBlobName(userId, safeFileName);
         return await DownloadAsync(GeneratedImagesContainerName, blobName);
     }
 
-    private async Task<BlobFile> DownloadAttachmentAsync(string userId, string storedFileName)
+    private async Task<StoredFile> DownloadAttachmentAsync(string userId, string fileName)
     {
-        BlobFile? blobFile = await GetAttachmentAsync(userId, storedFileName);
-        return blobFile ?? throw new FileNotFoundException("Uploaded file was not found.", storedFileName);
+        StoredFile? blobFile = await GetAttachmentAsync(userId, fileName);
+        return blobFile ?? throw new FileNotFoundException("Uploaded file was not found.", fileName);
     }
 
     private async Task UploadAsync(string containerName, string blobName, string contentType, byte[] bytes)
     {
         BlobContainerClient containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
-        await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+        await containerClient.CreateIfNotExistsAsync();
 
         BlobClient blobClient = containerClient.GetBlobClient(blobName);
         BinaryData data = BinaryData.FromBytes(bytes);
         BlobUploadOptions options = new()
         {
-            HttpHeaders = new()
+            HttpHeaders = new BlobHttpHeaders
             {
                 ContentType = contentType
             }
@@ -85,7 +86,7 @@ public class BlobStorageService(IConfiguration configuration)
         await blobClient.UploadAsync(data, options);
     }
 
-    private async Task<BlobFile?> DownloadAsync(string containerName, string blobName)
+    private async Task<StoredFile?> DownloadAsync(string containerName, string blobName)
     {
         BlobContainerClient containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         BlobClient blobClient = containerClient.GetBlobClient(blobName);
@@ -100,7 +101,7 @@ public class BlobStorageService(IConfiguration configuration)
                 contentType = "application/octet-stream";
             }
 
-            return new(result.Content.ToArray(), contentType);
+            return new StoredFile(result.Content.ToArray(), contentType);
         }
         catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
         {
@@ -108,14 +109,14 @@ public class BlobStorageService(IConfiguration configuration)
         }
     }
 
-    private static string GetAttachmentBlobName(string userId, string storedFileName)
+    private static string GetAttachmentBlobName(string userId, string fileName)
     {
-        return GetUserScopedBlobName(userId, storedFileName);
+        return GetUserScopedBlobName(userId, fileName);
     }
 
-    private static string GetUserScopedBlobName(string userId, string storedFileName)
+    private static string GetUserScopedBlobName(string userId, string fileName)
     {
-        return $"{Path.GetFileName(userId)}/{Path.GetFileName(storedFileName)}";
+        return $"{Path.GetFileName(userId)}/{Path.GetFileName(fileName)}";
     }
 
     private static string GetRequiredConnectionString(IConfiguration configuration)
@@ -127,11 +128,5 @@ public class BlobStorageService(IConfiguration configuration)
         }
 
         return connectionString;
-    }
-
-    public sealed class BlobFile(byte[] bytes, string contentType)
-    {
-        public byte[] Bytes { get; } = bytes;
-        public string ContentType { get; } = contentType;
     }
 }

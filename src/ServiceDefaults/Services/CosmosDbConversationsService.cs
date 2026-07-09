@@ -1,11 +1,12 @@
 using System.Net;
 using Microsoft.Azure.Cosmos;
 using ServiceDefaults.Constants;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 
 namespace ServiceDefaults.Services;
 
-public class ConversationsService(CosmosClient cosmosClient)
+public class CosmosDbConversationsService(CosmosClient cosmosClient) : IConversationsService
 {
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private Container? _container;

@@ -15,6 +15,7 @@ using Microsoft.JSInterop;
 using ModelContextProtocol.Client;
 using MudBlazor;
 using ServiceDefaults.Extensions;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
 using ServiceDefaults.Tools;
@@ -25,10 +26,10 @@ namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot;
 public partial class ChatbotPage(
     AzureOpenAIAgentFactory azureOpenAIAgentFactory,
     AIToolsFactory aiToolsFactory,
-    ConversationsService conversationsService,
+    IConversationsService conversationsService,
     AgentService agentService,
-    SettingsService settingsService,
-    BlobStorageService blobStorageService,
+    ISettingsService settingsService,
+    IStorageService storageService,
     ConversationChatMessageMapper conversationChatMessageMapper,
     AuthenticationStateProvider authenticationStateProvider,
     OpenWeatherMapOptions openWeatherMapOptions,
@@ -87,7 +88,7 @@ public partial class ChatbotPage(
             List<ConversationAttachment> attachments = [];
             foreach (UserInputAttachment file in _userInput.Attachments)
             {
-                attachments.Add(await blobStorageService.SaveAsync(_userId, file.FileName, file.ContentType, file.Bytes));
+                attachments.Add(await storageService.SaveAsync(_userId, file.FileName, file.ContentType, file.Bytes));
             }
 
             //Reset GUI so it is ready for new message
@@ -101,7 +102,7 @@ public partial class ChatbotPage(
             List<AITool> tools =
             [
                 WeatherTools.GetWeatherForCity(openWeatherMapOptions),
-                ..aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, _conversation, blobStorageService)),
+                ..aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, _conversation, storageService)),
                 ..TimeTools.All()
             ];
 

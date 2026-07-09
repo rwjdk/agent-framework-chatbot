@@ -12,6 +12,7 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using ServiceDefaults.Constants;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Services;
 
 #pragma warning disable IDE0130
@@ -59,10 +60,10 @@ public static class Extensions
 
         //Other Services
         builder.Services.AddSingleton<AgentService>();
-        builder.Services.AddSingleton<BlobStorageService>();
-        builder.Services.AddSingleton<ConversationsService>();
+        builder.Services.AddSingleton<IStorageService, BlobStorageService>();
+        builder.Services.AddSingleton<IConversationsService, CosmosDbConversationsService>();
         builder.Services.AddSingleton<ImageGenerationService>();
-        builder.Services.AddSingleton<SettingsService>();
+        builder.Services.AddSingleton<ISettingsService, CosmosDbSettingsService>();
         builder.Services.AddSingleton<ConversationChatMessageMapper>();
 
         builder.ConfigureOpenTelemetry();

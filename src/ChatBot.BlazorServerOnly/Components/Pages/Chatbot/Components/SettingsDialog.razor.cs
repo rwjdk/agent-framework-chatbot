@@ -1,6 +1,7 @@
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
 
@@ -8,8 +9,8 @@ namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 
 [UsedImplicitly]
 public partial class SettingsDialog(
-    SettingsService settingsService,
-    ConversationsService conversationsService,
+    ISettingsService settingsService,
+    IConversationsService conversationsService,
     IDialogService dialogService,
     ISnackbar snackbar)
 {

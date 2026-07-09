@@ -1,5 +1,6 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
 
@@ -8,7 +9,7 @@ namespace ServiceDefaults.AIContextProviders;
 internal class PersonalizationContextProvider(
     AgentService agentService,
     string userId,
-    SettingsService settingsService,
+    ISettingsService settingsService,
     Func<MemoryUpdate, Task> memoryUpdateNotification) : AIContextProvider
 {
     protected override async ValueTask<AIContext> ProvideAIContextAsync(InvokingContext context, CancellationToken cancellationToken = default)

@@ -8,7 +8,8 @@ using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using MudBlazor.Services;
 using ServiceDefaults.Extensions;
-using ServiceDefaults.Services;
+using ServiceDefaults.Interfaces;
+using ServiceDefaults.Models;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -67,7 +68,7 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-app.MapGet("/attachments/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, BlobStorageService blobStorageService) =>
+app.MapGet("/attachments/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, ServiceDefaults.Interfaces.IStorageService storageService) =>
 {
     string userId = user.GetUserId();
     if (string.IsNullOrWhiteSpace(userId))
@@ -75,16 +76,16 @@ app.MapGet("/attachments/{storedFileName}", async (string storedFileName, Claims
         return Results.Forbid();
     }
 
-    BlobStorageService.BlobFile? blobFile = await blobStorageService.GetAttachmentAsync(userId, storedFileName);
-    if (blobFile is null)
+    StoredFile? storedFile = await storageService.GetAttachmentAsync(userId, storedFileName);
+    if (storedFile is null)
     {
         return Results.NotFound();
     }
 
-    return Results.File(blobFile.Bytes, blobFile.ContentType);
+    return Results.File(storedFile.Bytes, storedFile.ContentType);
 }).RequireAuthorization();
 
-app.MapGet("/generated-images/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, BlobStorageService blobStorageService) =>
+app.MapGet("/generated-images/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, IStorageService storageService) =>
 {
     string userId = user.GetUserId();
     if (string.IsNullOrWhiteSpace(userId))
@@ -92,7 +93,7 @@ app.MapGet("/generated-images/{storedFileName}", async (string storedFileName, C
         return Results.Forbid();
     }
 
-    BlobStorageService.BlobFile? blobFile = await blobStorageService.GetGeneratedImageAsync(userId, storedFileName);
+    StoredFile? blobFile = await storageService.GetGeneratedImageAsync(userId, storedFileName);
     if (blobFile is null)
     {
         return Results.NotFound();

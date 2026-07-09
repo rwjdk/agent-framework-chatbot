@@ -8,10 +8,11 @@ using ServiceDefaults.AIContextProviders;
 using ServiceDefaults.Constants;
 using ServiceDefaults.Models;
 using System.ClientModel;
+using ServiceDefaults.Interfaces;
 
 namespace ServiceDefaults.Services;
 
-public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, SettingsService settingsService)
+public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISettingsService settingsService)
 {
     public async Task<string> GenerateTitleAsync(string firstChatMessage)
     {
