@@ -17,6 +17,18 @@ cosmosDbConnectionString.Resource.Description = "Enter 'Local' if you do not wit
 IResourceBuilder<ParameterResource> blobStorageConnectionString = builder.AddParameter(SecretKeys.BlobStorageConnectionString, secret: true);
 blobStorageConnectionString.Resource.Description = "Enter 'Local' if you do not with to use BlobStorage";
 
+IResourceBuilder<ParameterResource> auth0Domain = builder.AddParameter(SecretKeys.Auth0Domain, secret: true);
+auth0Domain.Resource.Description = "Enter the Auth0 tenant domain";
+
+IResourceBuilder<ParameterResource> auth0ClientId = builder.AddParameter(SecretKeys.Auth0ClientId, secret: true);
+auth0ClientId.Resource.Description = "Enter the Auth0 application client ID";
+
+IResourceBuilder<ParameterResource> auth0ClientSecret = builder.AddParameter(SecretKeys.Auth0ClientSecret, secret: true);
+auth0ClientSecret.Resource.Description = "Enter the Auth0 application client secret";
+
+IResourceBuilder<ParameterResource> auth0CallbackPath = builder.AddParameter(SecretKeys.Auth0CallbackPath, "/callback", secret: false);
+auth0CallbackPath.Resource.Description = "Enter the Auth0 callback path";
+
 ServerSettings serverSettings = builder.Configuration
     .GetRequiredSection(nameof(ServerSettings))
     .Get<ServerSettings>() ?? throw new InvalidOperationException($"{nameof(ServerSettings)} configuration is missing.");
@@ -27,6 +39,10 @@ builder.AddProject<ChatBot_BlazorServerOnly>("blazor-server-only")
     .WithEnvironment(SecretKeys.AzureOpenAIKey, azureOpenAiKey)
     .WithEnvironment(SecretKeys.CosmosDbConnectionString, cosmosDbConnectionString)
     .WithEnvironment(SecretKeys.BlobStorageConnectionString, blobStorageConnectionString)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0Domain), auth0Domain)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0ClientId), auth0ClientId)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0ClientSecret), auth0ClientSecret)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0CallbackPath), auth0CallbackPath)
     .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.UseImageGeneration)}", serverSettings.UseImageGeneration.ToString())
     .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.UseUserMemory)}", serverSettings.UseUserMemory.ToString())
     .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowMcpServers)}", serverSettings.AllowMcpServers.ToString())
@@ -36,3 +52,8 @@ builder.AddProject<ChatBot_BlazorServerOnly>("blazor-server-only")
     .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowAudioTranscription)}", serverSettings.AllowAudioTranscription.ToString());
 
 builder.Build().Run();
+
+static string ToEnvironmentVariableName(string parameterName)
+{
+    return parameterName.Replace("-", "__", StringComparison.Ordinal);
+}

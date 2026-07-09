@@ -1,7 +1,3 @@
-using System.Net;
-using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json;
-using ServiceDefaults.Constants;
 using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using JsonSerializer = System.Text.Json.JsonSerializer;

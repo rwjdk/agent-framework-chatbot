@@ -1,11 +1,11 @@
 using System.Security.Claims;
+using ChatBot.BlazorServerOnly.Authentication.Auth0;
+using ChatBot.BlazorServerOnly.Authentication.EntraId;
+using ChatBot.BlazorServerOnly.Authentication.Login;
 using ChatBot.BlazorServerOnly.Components;
 using Markdig;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.UI;
 using MudBlazor.Services;
 using ServiceDefaults.Extensions;
 using ServiceDefaults.Interfaces;
@@ -22,10 +22,18 @@ builder.Services.AddSingleton(new MarkdownPipelineBuilder()
     .Build());
 
 //Auth (Start)
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddAuth0Authentication(builder.Configuration)
+    .AddEntraIdAuthentication(builder.Configuration);
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
+    options.LoginPath = "/chooseLoginMethod";
     options.ExpireTimeSpan = TimeSpan.FromDays(90);
     options.SlidingExpiration = true;
     options.Events.OnSigningIn = context =>
@@ -41,8 +49,6 @@ builder.Services.AddAuthorizationBuilder()
         .RequireAuthenticatedUser()
         .Build());
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddControllersWithViews()
-    .AddMicrosoftIdentityUI();
 //Auth (End)
 
 // Add services to the container.
@@ -67,6 +73,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseAntiforgery();
+
+app.MapLoginEndpoints();
 
 app.MapGet("/attachments/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, ServiceDefaults.Interfaces.IStorageService storageService) =>
 {
@@ -102,7 +110,6 @@ app.MapGet("/generated-images/{storedFileName}", async (string storedFileName, C
     return Results.File(blobFile.Bytes, blobFile.ContentType);
 }).RequireAuthorization();
 
-app.MapControllers();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

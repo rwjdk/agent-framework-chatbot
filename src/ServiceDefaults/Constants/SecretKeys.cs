@@ -7,4 +7,8 @@ public static class SecretKeys
     public const string WeatherServiceKey = "WeatherServiceKey";
     public const string CosmosDbConnectionString = "CosmosDbConnectionString";
     public const string BlobStorageConnectionString = "BlobStorageConnectionString";
+    public const string Auth0Domain = "Auth0-Domain";
+    public const string Auth0ClientId = "Auth0-ClientId";
+    public const string Auth0ClientSecret = "Auth0-ClientSecret";
+    public const string Auth0CallbackPath = "Auth0-CallbackPath";
 }

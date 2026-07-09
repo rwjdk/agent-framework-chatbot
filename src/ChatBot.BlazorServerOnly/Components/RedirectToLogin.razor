@@ -8,6 +8,6 @@
             ? "/"
             : $"/{relativePath}";
 
-        NavigationManager.NavigateTo($"MicrosoftIdentity/Account/SignIn?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+        NavigationManager.NavigateTo($"chooseLoginMethod?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
     }
 }
