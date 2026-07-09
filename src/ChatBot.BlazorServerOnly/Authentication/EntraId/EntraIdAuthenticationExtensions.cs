@@ -9,8 +9,18 @@ internal static class EntraIdAuthenticationExtensions
 {
     public const string AuthenticationScheme = "EntraId";
 
+    public static bool IsEntraIdAuthenticationEnabled(this IConfiguration configuration)
+    {
+        return IsClientIdEnabled(configuration["AzureAd:ClientId"]);
+    }
+
     public static AuthenticationBuilder AddEntraIdAuthentication(this AuthenticationBuilder authenticationBuilder, IConfiguration configuration)
     {
+        if (!configuration.IsEntraIdAuthenticationEnabled())
+        {
+            return authenticationBuilder;
+        }
+
         authenticationBuilder.AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"), AuthenticationScheme);
         authenticationBuilder.Services.PostConfigure<OpenIdConnectOptions>(AuthenticationScheme, options =>
         {
@@ -31,5 +41,10 @@ internal static class EntraIdAuthenticationExtensions
         });
 
         return authenticationBuilder;
+    }
+
+    private static bool IsClientIdEnabled(string? clientId)
+    {
+        return !string.IsNullOrWhiteSpace(clientId) && !clientId.Equals("None", StringComparison.OrdinalIgnoreCase);
     }
 }

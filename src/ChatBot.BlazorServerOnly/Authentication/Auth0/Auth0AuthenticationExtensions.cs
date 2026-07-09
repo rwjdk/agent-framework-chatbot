@@ -10,8 +10,18 @@ internal static class Auth0AuthenticationExtensions
 {
     public const string AuthenticationScheme = "Auth0";
 
+    public static bool IsAuth0AuthenticationEnabled(this IConfiguration configuration)
+    {
+        return IsClientIdEnabled(configuration["Auth0:ClientId"]);
+    }
+
     public static AuthenticationBuilder AddAuth0Authentication(this AuthenticationBuilder authenticationBuilder, IConfiguration configuration)
     {
+        if (!configuration.IsAuth0AuthenticationEnabled())
+        {
+            return authenticationBuilder;
+        }
+
         string authority = GetAuthority(configuration);
         string clientId = GetRequiredConfigurationValue(configuration, "Auth0:ClientId");
         string clientSecret = GetRequiredConfigurationValue(configuration, "Auth0:ClientSecret");
@@ -67,6 +77,11 @@ internal static class Auth0AuthenticationExtensions
         });
 
         return authenticationBuilder;
+    }
+
+    private static bool IsClientIdEnabled(string? clientId)
+    {
+        return !string.IsNullOrWhiteSpace(clientId) && !clientId.Equals("None", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetAuthority(IConfiguration configuration)

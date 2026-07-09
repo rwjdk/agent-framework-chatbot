@@ -31,6 +31,16 @@ builder.Services
     })
     .AddAuth0Authentication(builder.Configuration)
     .AddEntraIdAuthentication(builder.Configuration);
+List<LoginProvider> loginProviders =
+[
+    new("Auth0", "/login/auth0", Auth0AuthenticationExtensions.AuthenticationScheme, builder.Configuration.IsAuth0AuthenticationEnabled()),
+    new("Entra ID", "/login/entra", EntraIdAuthenticationExtensions.AuthenticationScheme, builder.Configuration.IsEntraIdAuthenticationEnabled())
+];
+if (!loginProviders.Any(loginProvider => loginProvider.IsEnabled))
+{
+    throw new InvalidOperationException("At least one login provider must be enabled. Set Auth0-ClientId or EntraId-ClientId to a real value instead of 'None'.");
+}
+
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
     options.LoginPath = "/chooseLoginMethod";
@@ -74,7 +84,7 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
-app.MapLoginEndpoints();
+app.MapLoginEndpoints(loginProviders);
 
 app.MapGet("/attachments/{storedFileName}", async (string storedFileName, ClaimsPrincipal user, ServiceDefaults.Interfaces.IStorageService storageService) =>
 {

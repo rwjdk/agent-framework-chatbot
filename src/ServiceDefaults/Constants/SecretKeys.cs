@@ -11,4 +11,9 @@ public static class SecretKeys
     public const string Auth0ClientId = "Auth0-ClientId";
     public const string Auth0ClientSecret = "Auth0-ClientSecret";
     public const string Auth0CallbackPath = "Auth0-CallbackPath";
+    public const string EntraIdInstance = "EntraId-Instance";
+    public const string EntraIdTenantId = "EntraId-TenantId";
+    public const string EntraIdClientId = "EntraId-ClientId";
+    public const string EntraIdCallbackPath = "EntraId-CallbackPath";
+    public const string EntraIdSignedOutCallbackPath = "EntraId-SignedOutCallbackPath";
 }

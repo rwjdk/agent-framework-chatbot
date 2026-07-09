@@ -7,12 +7,15 @@ namespace ChatBot.BlazorServerOnly.Authentication.Login;
 
 internal static class LoginEndpointExtensions
 {
-    public static IEndpointRouteBuilder MapLoginEndpoints(this IEndpointRouteBuilder endpointRouteBuilder)
+    public static IEndpointRouteBuilder MapLoginEndpoints(this IEndpointRouteBuilder endpointRouteBuilder, IReadOnlyList<LoginProvider> loginProviders)
     {
         endpointRouteBuilder.MapGet(LoginAuthenticationConstants.ChooseLoginMethodPath, (string? returnUrl) =>
         {
             string localReturnUrl = GetLocalRedirectUri(returnUrl);
             string encodedReturnUrl = Uri.EscapeDataString(localReturnUrl);
+            string loginLinks = string.Join(Environment.NewLine, loginProviders
+                .Where(loginProvider => loginProvider.IsEnabled)
+                .Select(loginProvider => $"""<a href="{loginProvider.LoginPath}?returnUrl={encodedReturnUrl}">Continue with {loginProvider.DisplayName}</a>"""));
 
             return Results.Content($$"""
             <!doctype html>
@@ -28,7 +31,6 @@ internal static class LoginEndpointExtensions
                     p { margin: 0 0 20px; line-height: 1.5; color: #52606d; }
                     nav { display: grid; gap: 12px; }
                     a { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 6px; background: #1f2933; color: #fff; text-decoration: none; font-weight: 600; }
-                    a.secondary { background: #fff; color: #1f2933; border: 1px solid #9aa5b1; }
                     a:focus-visible { outline: 3px solid #7cc4fa; outline-offset: 2px; }
                 </style>
             </head>
@@ -37,8 +39,7 @@ internal static class LoginEndpointExtensions
                     <h1>Choose login method</h1>
                     <p>Select the identity provider you want to use for this session.</p>
                     <nav aria-label="Login methods">
-                        <a href="/login/auth0?returnUrl={{encodedReturnUrl}}">Continue with Auth0</a>
-                        <a class="secondary" href="/login/entra?returnUrl={{encodedReturnUrl}}">Continue with Entra ID</a>
+                        {{loginLinks}}
                     </nav>
                 </main>
             </body>
@@ -47,8 +48,8 @@ internal static class LoginEndpointExtensions
         }).AllowAnonymous();
 
         endpointRouteBuilder.MapGet("/login", () => Results.Redirect(LoginAuthenticationConstants.ChooseLoginMethodPath)).AllowAnonymous();
-        endpointRouteBuilder.MapGet("/login/auth0", (string? returnUrl) => ChallengeExternalLogin(Auth0AuthenticationExtensions.AuthenticationScheme, returnUrl)).AllowAnonymous();
-        endpointRouteBuilder.MapGet("/login/entra", (string? returnUrl) => ChallengeExternalLogin(EntraIdAuthenticationExtensions.AuthenticationScheme, returnUrl)).AllowAnonymous();
+        endpointRouteBuilder.MapGet("/login/auth0", (string? returnUrl) => ChallengeExternalLogin(Auth0AuthenticationExtensions.AuthenticationScheme, loginProviders, returnUrl)).AllowAnonymous();
+        endpointRouteBuilder.MapGet("/login/entra", (string? returnUrl) => ChallengeExternalLogin(EntraIdAuthenticationExtensions.AuthenticationScheme, loginProviders, returnUrl)).AllowAnonymous();
         endpointRouteBuilder.MapGet(LoginAuthenticationConstants.LoginErrorPath, () => Results.Content(
             """
             <!doctype html>
@@ -86,9 +87,9 @@ internal static class LoginEndpointExtensions
             };
 
             await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            if (authenticationScheme is Auth0AuthenticationExtensions.AuthenticationScheme or EntraIdAuthenticationExtensions.AuthenticationScheme)
+            if (loginProviders.Any(loginProvider => loginProvider.AuthenticationScheme == authenticationScheme && loginProvider.IsEnabled))
             {
-                await httpContext.SignOutAsync(authenticationScheme, authenticationProperties);
+                await httpContext.SignOutAsync(authenticationScheme!, authenticationProperties);
                 return Results.Empty;
             }
 
@@ -98,8 +99,13 @@ internal static class LoginEndpointExtensions
         return endpointRouteBuilder;
     }
 
-    private static IResult ChallengeExternalLogin(string authenticationScheme, string? returnUrl)
+    private static IResult ChallengeExternalLogin(string authenticationScheme, IReadOnlyList<LoginProvider> loginProviders, string? returnUrl)
     {
+        if (!loginProviders.Any(loginProvider => loginProvider.AuthenticationScheme == authenticationScheme && loginProvider.IsEnabled))
+        {
+            return Results.NotFound();
+        }
+
         AuthenticationProperties authenticationProperties = new()
         {
             RedirectUri = GetLocalRedirectUri(returnUrl)
