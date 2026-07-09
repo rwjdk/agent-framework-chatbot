@@ -29,6 +29,7 @@ public partial class ChatbotPage(
     AuthenticationStateProvider authenticationStateProvider,
     IJSRuntime jsRuntime,
     IDialogService dialogService,
+    ServerSettings serverSettings,
     ISnackbar snackbar) : IAsyncDisposable
 {
     private readonly UserInput _userInput = new();
@@ -42,6 +43,12 @@ public partial class ChatbotPage(
     private IJSObjectReference? _audioRecorderModule;
     private IJSObjectReference? _scrollModule;
     private ElementReference _chatMessagesElement;
+    private ServerSettings ServerSettings => serverSettings;
+    private bool UseStreaming => !ServerSettings.AllowChatVisualsCustomization || _settings?.Streaming == true;
+    private bool ShowReasoning => ServerSettings.AllowChatVisualsCustomization && _settings?.ShowReasoning == true;
+    private bool ShowTokens => ServerSettings.AllowChatVisualsCustomization && _settings?.ShowTokens == true;
+    private bool ShowToolCalls => ServerSettings.AllowChatVisualsCustomization && _settings?.ShowToolCalls == true;
+    private bool ShowMemoryUpdate => ServerSettings.UseUserMemory && ServerSettings.AllowChatVisualsCustomization && _settings?.ShowMemoryUpdate == true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,9 +87,12 @@ public partial class ChatbotPage(
 
             //Attachments
             List<ConversationAttachment> attachments = [];
-            foreach (UserInputAttachment file in _userInput.Attachments)
+            if (ServerSettings.AllowFileAttachments)
             {
-                attachments.Add(await storageService.SaveAttachmentAsync(_userId, file.FileName, file.ContentType, file.Bytes));
+                foreach (UserInputAttachment file in _userInput.Attachments)
+                {
+                    attachments.Add(await storageService.SaveAttachmentAsync(_userId, file.FileName, file.ContentType, file.Bytes));
+                }
             }
 
             //Reset GUI so it is ready for new message
@@ -93,17 +103,20 @@ public partial class ChatbotPage(
             await ScrollMessagesToBottomAsync();
 
             //Prepare MCP Clients
-            foreach (McpServer mcpServer in _settings.McpServers)
+            if (ServerSettings.AllowMcpServers)
             {
-                McpClientTools mcpClientTool = await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers);
-                mcpClientTools.Add(mcpClientTool);
+                foreach (McpServer mcpServer in _settings.McpServers)
+                {
+                    McpClientTools mcpClientTool = await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers);
+                    mcpClientTools.Add(mcpClientTool);
+                }
             }
 
             //LLM Work
             AIAgent agent = agentService.GetMainAgent(_userId, mcpClientTools, _conversation, _settings.Instructions, MemoryUpdateNotificationAsync);
             List<ChatMessage> chatMessagesToSend = await conversationChatMessageMapper.ToChatMessagesAsync(_conversation);
             AgentResponse response;
-            if (_settings.Streaming)
+            if (UseStreaming)
             {
                 List<AgentResponseUpdate> updates = [];
                 await foreach (AgentResponseUpdate update in agent.RunStreamingAsync(chatMessagesToSend))
@@ -158,6 +171,11 @@ public partial class ChatbotPage(
 
     private async Task MemoryUpdateNotificationAsync(MemoryUpdate obj)
     {
+        if (!ServerSettings.UseUserMemory)
+        {
+            return;
+        }
+
         _visualState.MemoryUpdate = obj;
         if (_settings is not null)
         {
@@ -266,6 +284,12 @@ public partial class ChatbotPage(
 
     private async Task SelectFilesAsync(InputFileChangeEventArgs args)
     {
+        if (!ServerSettings.AllowFileAttachments)
+        {
+            _userInput.Attachments = [];
+            return;
+        }
+
         List<UserInputAttachment> attachments = [];
         foreach (IBrowserFile file in args.GetMultipleFiles().Where(x => x.ContentType == "application/pdf" || x.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)))
         {
@@ -287,7 +311,7 @@ public partial class ChatbotPage(
 
     private async Task ToggleRecordingAsync()
     {
-        if (_visualState.IsSendingMessage)
+        if (_visualState.IsSendingMessage || !ServerSettings.AllowAudioTranscription)
         {
             return;
         }

@@ -17,11 +17,6 @@ internal class PersonalizationContextProvider(
         Settings settings = await settingsService.LoadAsync(userId);
 
         string? instructions = null;
-        if (!string.IsNullOrWhiteSpace(settings.Instructions))
-        {
-            instructions += $"<personal_instructions>{settings.Instructions}</personal_instructions>";
-        }
-
         if (settings.UserMemories.Count > 0)
         {
             IEnumerable<string> memories = settings.UserMemories.Select(x => $"<memory>{x}</memory>");

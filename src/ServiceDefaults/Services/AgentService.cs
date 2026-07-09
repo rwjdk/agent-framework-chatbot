@@ -17,7 +17,13 @@ using ServiceDefaults.Tools;
 
 namespace ServiceDefaults.Services;
 
-public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISettingsService settingsService, IStorageService storageService, AIToolsFactory aiToolsFactory, IConfiguration configuration)
+public class AgentService(
+    AzureOpenAIAgentFactory azureOpenAIAgentFactory,
+    ISettingsService settingsService,
+    IStorageService storageService,
+    AIToolsFactory aiToolsFactory,
+    IConfiguration configuration,
+    ServerSettings serverSettings)
 {
     public async Task<string> GenerateTitleAsync(string firstChatMessage)
     {
@@ -40,6 +46,11 @@ public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISett
 
     public async Task<MemoryUpdate> GetMemoryUpdatesAsync(List<ChatMessage> inputToMemoryExtractor)
     {
+        if (!serverSettings.UseUserMemory)
+        {
+            return new MemoryUpdate(null, null);
+        }
+
         AzureOpenAIAgent agent = azureOpenAIAgentFactory.CreateAgent(new AgentOptions
         {
             Model = AIModelIds.MemoryModel,
@@ -59,11 +70,11 @@ public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISett
     public AIAgent GetMainAgent(string userId, IList<McpClientTools> mcpClientTools, Conversation conversation, string instructions, Func<MemoryUpdate, Task> memoryUpdateNotification)
     {
         //Prepare Regular Tools
-        List<AITool> tools =
-        [
-            ..aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, conversation, storageService)),
-            ..TimeTools.All()
-        ];
+        List<AITool> tools = [..TimeTools.All()];
+        if (serverSettings.UseImageGeneration)
+        {
+            tools.AddRange(aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, conversation, storageService)));
+        }
 
         string? weatherServiceKey = configuration[SecretKeys.WeatherServiceKey];
         if (weatherServiceKey != null && !weatherServiceKey.Equals("None", StringComparison.InvariantCultureIgnoreCase))
@@ -76,9 +87,18 @@ public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISett
         }
 
         //Prepare MCP Tools
-        foreach (McpClientTools mcpClientTool in mcpClientTools)
+        if (serverSettings.AllowMcpServers)
         {
-            tools.AddRange(mcpClientTool.Tools);
+            foreach (McpClientTools mcpClientTool in mcpClientTools)
+            {
+                tools.AddRange(mcpClientTool.Tools);
+            }
+        }
+
+        List<AIContextProvider> aiContextProviders = [];
+        if (serverSettings.UseUserMemory)
+        {
+            aiContextProviders.Add(new PersonalizationContextProvider(this, userId, settingsService, memoryUpdateNotification));
         }
 
         return azureOpenAIAgentFactory.CreateAgent(new AgentOptions
@@ -88,13 +108,18 @@ public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISett
             ReasoningEffort = OpenAIReasoningEffort.Medium,
             ReasoningSummaryVerbosity = OpenAIReasoningSummaryVerbosity.Detailed,
             Tools = tools,
-            Instructions = instructions,
-            AIContextProviders = [new PersonalizationContextProvider(this, userId, settingsService, memoryUpdateNotification)]
+            Instructions = serverSettings.AllowCustomInstructions ? instructions : null,
+            AIContextProviders = aiContextProviders
         });
     }
 
     public async Task<string> GenerateTranscriptionAsync(Stream audioStream, string filename)
     {
+        if (!serverSettings.AllowAudioTranscription)
+        {
+            throw new InvalidOperationException("Audio transcription is disabled by server settings.");
+        }
+
         AzureOpenAIClient client = azureOpenAIAgentFactory.Connection.GetClient();
         AudioClient audioClient = client.GetAudioClient(AIModelIds.TranscribeModel);
         ClientResult<AudioTranscription> audioTranscription = await audioClient.TranscribeAudioAsync(

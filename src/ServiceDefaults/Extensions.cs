@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using ServiceDefaults.Constants;
 using ServiceDefaults.Interfaces;
+using ServiceDefaults.Models;
 using ServiceDefaults.Services;
 
 #pragma warning disable IDE0130
@@ -29,6 +31,8 @@ public static class Extensions
     // ReSharper disable once UnusedMethodReturnValue.Global
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        builder.Services.AddSingleton(ReadServerSettings(builder.Configuration));
+
         //Agent Framework Toolkit Initialization
         string? azureOpenAIEndpoint = builder.Configuration[SecretKeys.AzureOpenAIEndpoint];
         string? azureOpenAIKey = builder.Configuration[SecretKeys.AzureOpenAIKey];
@@ -100,6 +104,13 @@ public static class Extensions
 
 
         return builder;
+    }
+
+    private static ServerSettings ReadServerSettings(IConfiguration configuration)
+    {
+        return configuration
+            .GetRequiredSection(nameof(ServerSettings))
+            .Get<ServerSettings>() ?? throw new InvalidOperationException($"{nameof(ServerSettings)} configuration is missing.");
     }
 
     [PublicAPI]

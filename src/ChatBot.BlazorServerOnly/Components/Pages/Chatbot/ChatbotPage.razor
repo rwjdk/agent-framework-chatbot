@@ -24,18 +24,21 @@
                         }
                         else if (message.Role == ChatRole.Assistant)
                         {
-                            if (_settings.ShowReasoning)
+                            if (ShowReasoning)
                             {
                                 <AssistantReasoningResponse Contents="message.Contents"/>
                             }
 
-                            if (_settings.ShowToolCalls)
+                            if (ShowToolCalls)
                             {
                                 <AssistantToolCallResponse Contents="message.Contents" Conversation="_conversation"/>
                             }
 
-                            <AssistantTextResponse Message="message" Settings="_settings"/>
-                            <AssistantImageResponse Message="message"/>
+                            <AssistantTextResponse Message="message" ShowTokens="@ShowTokens"/>
+                            @if (ServerSettings.UseImageGeneration)
+                            {
+                                <AssistantImageResponse Message="message"/>
+                            }
                         }
                     }
 
@@ -43,7 +46,7 @@
                                     Conversation="_conversation"
                                     VisualState="_visualState"/>
 
-                    @if (_settings.ShowMemoryUpdate && _visualState.MemoryUpdate != null)
+                    @if (ShowMemoryUpdate && _visualState.MemoryUpdate != null)
                     {
                         <article class="message-row from-assistant">
                             <p class="meta-info" style="color: maroon">@_visualState.MemoryUpdate.GetDisplayString()</p>
@@ -53,7 +56,7 @@
             </section>
 
             <form class="composer" @onsubmit="SendAsync">
-                @if (_userInput.Attachments.Count > 0)
+                @if (ServerSettings.AllowFileAttachments && _userInput.Attachments.Count > 0)
                 {
                     <div class="pending-attachments">
                         @foreach (UserInputAttachment file in _userInput.Attachments)
@@ -74,24 +77,27 @@
                     </div>
                 }
                 <div class="composer-controls">
-                    <MudFileUpload T="IReadOnlyList<IBrowserFile>"
-                                   Accept="application/pdf,image/*"
-                                   MaximumFileCount="10"
-                                   Disabled="@_visualState.IsSendingMessage"
-                                   OnFilesChanged="SelectFilesAsync">
-                        <CustomContent Context="fileUpload">
-                            <MudTooltip Text="Attach files">
-                                <MudIconButton Class="composer-icon-button"
-                                               Icon="@Icons.Material.Filled.AttachFile"
-                                               Color="Color.Default"
-                                               ButtonType="ButtonType.Button"
-                                               Disabled="@_visualState.IsSendingMessage"
-                                               OnClick="fileUpload.OpenFilePickerAsync"/>
-                            </MudTooltip>
-                        </CustomContent>
-                        <SelectedTemplate>
-                        </SelectedTemplate>
-                    </MudFileUpload>
+                    @if (ServerSettings.AllowFileAttachments)
+                    {
+                        <MudFileUpload T="IReadOnlyList<IBrowserFile>"
+                                       Accept="application/pdf,image/*"
+                                       MaximumFileCount="10"
+                                       Disabled="@_visualState.IsSendingMessage"
+                                       OnFilesChanged="SelectFilesAsync">
+                            <CustomContent Context="fileUpload">
+                                <MudTooltip Text="Attach files">
+                                    <MudIconButton Class="composer-icon-button"
+                                                   Icon="@Icons.Material.Filled.AttachFile"
+                                                   Color="Color.Default"
+                                                   ButtonType="ButtonType.Button"
+                                                   Disabled="@_visualState.IsSendingMessage"
+                                                   OnClick="fileUpload.OpenFilePickerAsync"/>
+                                </MudTooltip>
+                            </CustomContent>
+                            <SelectedTemplate>
+                            </SelectedTemplate>
+                        </MudFileUpload>
+                    }
                     <MudTextField T="string"
                                   @bind-Value="@_userInput.Text"
                                   Lines="3"
@@ -108,14 +114,17 @@
                                   OnKeyDown="HandleComposerKeyDownAsync"
                                   Class="message-input"/>
 
-                    <MudTooltip Text="@(_visualState.RecordingStateText)">
-                        <MudIconButton Class="composer-icon-button"
-                                       Icon="@(_visualState.RecordingStateIcon)"
-                                       Color="@(_visualState.RecordingStateColor)"
-                                       Disabled="_visualState.DisableRecordingButton"
-                                       ButtonType="ButtonType.Button"
-                                       OnClick="ToggleRecordingAsync"/>
-                    </MudTooltip>
+                    @if (ServerSettings.AllowAudioTranscription)
+                    {
+                        <MudTooltip Text="@(_visualState.RecordingStateText)">
+                            <MudIconButton Class="composer-icon-button"
+                                           Icon="@(_visualState.RecordingStateIcon)"
+                                           Color="@(_visualState.RecordingStateColor)"
+                                           Disabled="_visualState.DisableRecordingButton"
+                                           ButtonType="ButtonType.Button"
+                                           OnClick="ToggleRecordingAsync"/>
+                        </MudTooltip>
+                    }
                 </div>
             </form>
         </div>

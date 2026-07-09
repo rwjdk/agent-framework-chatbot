@@ -12,6 +12,7 @@ public partial class SettingsDialog(
     ISettingsService settingsService,
     IConversationsService conversationsService,
     IDialogService dialogService,
+    ServerSettings serverSettings,
     ISnackbar snackbar)
 {
     private Settings? _settings;
@@ -21,6 +22,7 @@ public partial class SettingsDialog(
     private string? _memoryValidationMessage;
     private string? _mcpValidationMessage;
     private SettingsSection _selectedSection = SettingsSection.Chat;
+    private ServerSettings ServerSettings => serverSettings;
 
     [CascadingParameter]
     private IMudDialogInstance? MudDialog { get; set; }
@@ -50,14 +52,61 @@ public partial class SettingsDialog(
             Value = x
         }).ToList();
         _mcpServers = _settings.McpServers.Select(ToEditor).ToList();
+        if (!IsSectionAvailable(_selectedSection))
+        {
+            _selectedSection = GetDefaultSection();
+        }
+
         _loadedUserId = UserId;
     }
 
     private void SelectSection(SettingsSection section)
     {
+        if (!IsSectionAvailable(section))
+        {
+            return;
+        }
+
         _selectedSection = section;
         _memoryValidationMessage = null;
         _mcpValidationMessage = null;
+    }
+
+    private SettingsSection GetDefaultSection()
+    {
+        if (IsSectionAvailable(SettingsSection.Chat))
+        {
+            return SettingsSection.Chat;
+        }
+
+        if (IsSectionAvailable(SettingsSection.Instructions))
+        {
+            return SettingsSection.Instructions;
+        }
+
+        if (IsSectionAvailable(SettingsSection.Memories))
+        {
+            return SettingsSection.Memories;
+        }
+
+        if (IsSectionAvailable(SettingsSection.McpServers))
+        {
+            return SettingsSection.McpServers;
+        }
+
+        return SettingsSection.DangerZone;
+    }
+
+    private bool IsSectionAvailable(SettingsSection section)
+    {
+        return section switch
+        {
+            SettingsSection.Chat => ServerSettings.AllowChatVisualsCustomization,
+            SettingsSection.Instructions => ServerSettings.AllowCustomInstructions,
+            SettingsSection.Memories => ServerSettings.UseUserMemory,
+            SettingsSection.McpServers => ServerSettings.AllowMcpServers,
+            _ => true
+        };
     }
 
     private Variant GetSectionButtonVariant(SettingsSection section)
@@ -92,16 +141,31 @@ public partial class SettingsDialog(
 
     private async Task SaveChatSettingsAsync()
     {
+        if (!ServerSettings.AllowChatVisualsCustomization)
+        {
+            return;
+        }
+
         await SaveCurrentSettingsAsync("Chat settings saved.");
     }
 
     private async Task SaveInstructionsAsync()
     {
+        if (!ServerSettings.AllowCustomInstructions)
+        {
+            return;
+        }
+
         await SaveCurrentSettingsAsync("Instructions saved.");
     }
 
     private void AddMemory()
     {
+        if (!ServerSettings.UseUserMemory)
+        {
+            return;
+        }
+
         _memories.Add(new MemoryEditor());
         _memoryValidationMessage = null;
     }
@@ -117,7 +181,7 @@ public partial class SettingsDialog(
 
     private async Task SaveMemoriesAsync()
     {
-        if (_settings is null)
+        if (_settings is null || !ServerSettings.UseUserMemory)
         {
             return;
         }
@@ -135,6 +199,11 @@ public partial class SettingsDialog(
 
     private void AddMcpServer()
     {
+        if (!ServerSettings.AllowMcpServers)
+        {
+            return;
+        }
+
         _mcpServers.Add(new McpServerEditor());
         _mcpValidationMessage = null;
     }
@@ -149,7 +218,7 @@ public partial class SettingsDialog(
 
     private void AddHeader(int serverIndex)
     {
-        if (serverIndex >= 0 && serverIndex < _mcpServers.Count)
+        if (ServerSettings.AllowMcpServers && serverIndex >= 0 && serverIndex < _mcpServers.Count)
         {
             _mcpServers[serverIndex].Headers.Add(new McpHeaderEditor());
             _mcpValidationMessage = null;
@@ -166,7 +235,7 @@ public partial class SettingsDialog(
 
     private async Task SaveIntegrationsAsync()
     {
-        if (_settings is null)
+        if (_settings is null || !ServerSettings.AllowMcpServers)
         {
             return;
         }
