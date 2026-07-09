@@ -41,11 +41,21 @@ public static class Extensions
         //Tools Factory (MCP)
         builder.Services.AddAIToolFactory();
 
-        //Cosmos DB
+        //Cosmos DB (or local)
         string? cosmosDbConnectionString = builder.Configuration[SecretKeys.CosmosDbConnectionString];
         if (!string.IsNullOrWhiteSpace(cosmosDbConnectionString))
         {
-            builder.Services.AddSingleton(new CosmosClient(cosmosDbConnectionString));
+            if (cosmosDbConnectionString.Equals("Local", StringComparison.InvariantCultureIgnoreCase))
+            {
+                builder.Services.AddSingleton<IConversationsService, FileConversationsService>();
+                builder.Services.AddSingleton<ISettingsService, FileSettingsService>();
+            }
+            else
+            {
+                builder.Services.AddSingleton(new CosmosClient(cosmosDbConnectionString));
+                builder.Services.AddSingleton<IConversationsService, CosmosDbConversationsService>();
+                builder.Services.AddSingleton<ISettingsService, CosmosDbSettingsService>();
+            }
         }
 
         //Open Weather Map Setup
@@ -58,15 +68,25 @@ public static class Extensions
             });
         }
 
+        //Blob Storage (or local)
+        string? blobStorageConnectionString = builder.Configuration[SecretKeys.BlobStorageConnectionString];
+        if (blobStorageConnectionString != null)
+        {
+            if (blobStorageConnectionString.Equals("Local", StringComparison.InvariantCultureIgnoreCase))
+            {
+                builder.Services.AddSingleton<IStorageService, FileStorageService>();
+            }
+            else
+            {
+                builder.Services.AddSingleton<IStorageService, BlobStorageService>();
+            }
+        }
+
         //Other Services
         builder.Services.AddSingleton<AgentService>();
-        builder.Services.AddSingleton<IStorageService, FileStorageService>();
-        //builder.Services.AddSingleton<IStorageService, BlobStorageService>();
-        builder.Services.AddSingleton<IConversationsService, CosmosDbConversationsService>();
         builder.Services.AddSingleton<ImageGenerationService>();
-        builder.Services.AddSingleton<ISettingsService, CosmosDbSettingsService>();
         builder.Services.AddSingleton<ConversationChatMessageMapper>();
-
+        
         builder.ConfigureOpenTelemetry();
 
         builder.AddDefaultHealthChecks();
