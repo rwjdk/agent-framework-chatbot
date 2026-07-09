@@ -1,6 +1,4 @@
-using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.Tools;
-using AgentFrameworkToolkit.Tools.Common;
 using AgentFrameworkToolkit.Tools.ModelContextProtocol;
 using ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 using ChatBot.BlazorServerOnly.Models;
@@ -17,13 +15,11 @@ using ServiceDefaults.Extensions;
 using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
-using ServiceDefaults.Tools;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot;
 
 [UsedImplicitly]
 public partial class ChatbotPage(
-    AzureOpenAIAgentFactory azureOpenAIAgentFactory,
     AIToolsFactory aiToolsFactory,
     IConversationsService conversationsService,
     AgentService agentService,
@@ -31,7 +27,6 @@ public partial class ChatbotPage(
     IStorageService storageService,
     ConversationChatMessageMapper conversationChatMessageMapper,
     AuthenticationStateProvider authenticationStateProvider,
-    OpenWeatherMapOptions openWeatherMapOptions,
     IJSRuntime jsRuntime,
     IDialogService dialogService,
     ISnackbar snackbar) : IAsyncDisposable
@@ -97,24 +92,15 @@ public partial class ChatbotPage(
             await InvokeAsync(StateHasChanged);
             await ScrollMessagesToBottomAsync();
 
-            //Prepare Regular Tools
-            List<AITool> tools =
-            [
-                WeatherTools.GetWeatherForCity(openWeatherMapOptions),
-                ..aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, _conversation, storageService)),
-                ..TimeTools.All()
-            ];
-
-            //Prepare MCP Tools (and convert to regular tools)
+            //Prepare MCP Clients
             foreach (McpServer mcpServer in _settings.McpServers)
             {
                 McpClientTools mcpClientTool = await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers);
                 mcpClientTools.Add(mcpClientTool);
-                tools.AddRange(mcpClientTool.Tools);
             }
 
             //LLM Work
-            AIAgent agent = agentService.GetMainAgent(_userId, tools, _settings.Instructions, MemoryUpdateNotificationAsync);
+            AIAgent agent = agentService.GetMainAgent(_userId, mcpClientTools, _conversation, _settings.Instructions, MemoryUpdateNotificationAsync);
             List<ChatMessage> chatMessagesToSend = await conversationChatMessageMapper.ToChatMessagesAsync(_conversation);
             AgentResponse response;
             if (_settings.Streaming)

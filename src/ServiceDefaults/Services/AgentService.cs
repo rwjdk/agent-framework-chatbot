@@ -1,18 +1,23 @@
 ﻿using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.OpenAI;
+using AgentFrameworkToolkit.Tools.ModelContextProtocol;
 using Azure.AI.OpenAI;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using OpenAI.Audio;
 using ServiceDefaults.AIContextProviders;
 using ServiceDefaults.Constants;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using System.ClientModel;
-using ServiceDefaults.Interfaces;
+using AgentFrameworkToolkit.Tools;
+using AgentFrameworkToolkit.Tools.Common;
+using Microsoft.Extensions.Configuration;
+using ServiceDefaults.Tools;
 
 namespace ServiceDefaults.Services;
 
-public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISettingsService settingsService)
+public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISettingsService settingsService, IStorageService storageService, AIToolsFactory aiToolsFactory, IConfiguration configuration)
 {
     public async Task<string> GenerateTitleAsync(string firstChatMessage)
     {
@@ -51,8 +56,31 @@ public class AgentService(AzureOpenAIAgentFactory azureOpenAIAgentFactory, ISett
         return response.Result;
     }
 
-    public AIAgent GetMainAgent(string userId, IList<AITool> tools, string instructions, Func<MemoryUpdate, Task> memoryUpdateNotification)
+    public AIAgent GetMainAgent(string userId, IList<McpClientTools> mcpClientTools, Conversation conversation, string instructions, Func<MemoryUpdate, Task> memoryUpdateNotification)
     {
+        //Prepare Regular Tools
+        List<AITool> tools =
+        [
+            ..aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, conversation, storageService)),
+            ..TimeTools.All()
+        ];
+
+        string? weatherServiceKey = configuration[SecretKeys.WeatherServiceKey];
+        if (weatherServiceKey != null && !weatherServiceKey.Equals("None", StringComparison.InvariantCultureIgnoreCase))
+        {
+            AITool weatherTool = WeatherTools.GetWeatherForCity(new OpenWeatherMapOptions
+            {
+                ApiKey = weatherServiceKey
+            });
+            tools.Add(weatherTool);
+        }
+
+        //Prepare MCP Tools
+        foreach (McpClientTools mcpClientTool in mcpClientTools)
+        {
+            tools.AddRange(mcpClientTool.Tools);
+        }
+
         return azureOpenAIAgentFactory.CreateAgent(new AgentOptions
         {
             ClientType = ClientType.ResponsesApi,

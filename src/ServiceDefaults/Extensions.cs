@@ -1,6 +1,5 @@
 using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.Tools;
-using AgentFrameworkToolkit.Tools.Common;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -56,16 +55,6 @@ public static class Extensions
                 builder.Services.AddSingleton<IConversationsService, CosmosDbConversationsService>();
                 builder.Services.AddSingleton<ISettingsService, CosmosDbSettingsService>();
             }
-        }
-
-        //Open Weather Map Setup
-        string? weatherServiceKey = builder.Configuration[SecretKeys.WeatherServiceKey];
-        if (weatherServiceKey != null)
-        {
-            builder.Services.AddSingleton(new OpenWeatherMapOptions
-            {
-                ApiKey = weatherServiceKey
-            });
         }
 
         //Blob Storage (or local)
