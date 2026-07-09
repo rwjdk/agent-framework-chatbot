@@ -5,38 +5,50 @@
             <div class="settings-dialog-layout">
                 <aside class="settings-dialog-sidebar">
                     <MudStack Spacing="1">
-                        <MudButton Class="@GetSectionButtonClass(SettingsSection.Chat)"
-                                   Variant="@GetSectionButtonVariant(SettingsSection.Chat)"
-                                   Color="@GetSectionButtonColor(SettingsSection.Chat)"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Tune"
-                                   OnClick="() => SelectSection(SettingsSection.Chat)">
-                            Chat
-                        </MudButton>
-                        <MudButton Class="@GetSectionButtonClass(SettingsSection.Instructions)"
-                                   Variant="@GetSectionButtonVariant(SettingsSection.Instructions)"
-                                   Color="@GetSectionButtonColor(SettingsSection.Instructions)"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.EditNote"
-                                   OnClick="() => SelectSection(SettingsSection.Instructions)">
-                            Instructions
-                        </MudButton>
-                        <MudButton Class="@GetSectionButtonClass(SettingsSection.Memories)"
-                                   Variant="@GetSectionButtonVariant(SettingsSection.Memories)"
-                                   Color="@GetSectionButtonColor(SettingsSection.Memories)"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Memory"
-                                   OnClick="() => SelectSection(SettingsSection.Memories)">
-                            Memories
-                        </MudButton>
-                        <MudButton Class="@GetSectionButtonClass(SettingsSection.McpServers)"
-                                   Variant="@GetSectionButtonVariant(SettingsSection.McpServers)"
-                                   Color="@GetSectionButtonColor(SettingsSection.McpServers)"
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Hub"
-                                   OnClick="() => SelectSection(SettingsSection.McpServers)">
-                            Integrations
-                        </MudButton>
+                        @if (ServerSettings.AllowChatVisualsCustomization)
+                        {
+                            <MudButton Class="@GetSectionButtonClass(SettingsSection.Chat)"
+                                       Variant="@GetSectionButtonVariant(SettingsSection.Chat)"
+                                       Color="@GetSectionButtonColor(SettingsSection.Chat)"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Tune"
+                                       OnClick="() => SelectSection(SettingsSection.Chat)">
+                                Chat
+                            </MudButton>
+                        }
+                        @if (ServerSettings.AllowCustomInstructions)
+                        {
+                            <MudButton Class="@GetSectionButtonClass(SettingsSection.Instructions)"
+                                       Variant="@GetSectionButtonVariant(SettingsSection.Instructions)"
+                                       Color="@GetSectionButtonColor(SettingsSection.Instructions)"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.EditNote"
+                                       OnClick="() => SelectSection(SettingsSection.Instructions)">
+                                Instructions
+                            </MudButton>
+                        }
+                        @if (ServerSettings.UseUserMemory)
+                        {
+                            <MudButton Class="@GetSectionButtonClass(SettingsSection.Memories)"
+                                       Variant="@GetSectionButtonVariant(SettingsSection.Memories)"
+                                       Color="@GetSectionButtonColor(SettingsSection.Memories)"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Memory"
+                                       OnClick="() => SelectSection(SettingsSection.Memories)">
+                                Memories
+                            </MudButton>
+                        }
+                        @if (ServerSettings.AllowMcpServers)
+                        {
+                            <MudButton Class="@GetSectionButtonClass(SettingsSection.McpServers)"
+                                       Variant="@GetSectionButtonVariant(SettingsSection.McpServers)"
+                                       Color="@GetSectionButtonColor(SettingsSection.McpServers)"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Hub"
+                                       OnClick="() => SelectSection(SettingsSection.McpServers)">
+                                Integrations
+                            </MudButton>
+                        }
                         <MudButton Class="@GetSectionButtonClass(SettingsSection.DangerZone)"
                                    Variant="@GetSectionButtonVariant(SettingsSection.DangerZone)"
                                    Color="Color.Error"
@@ -54,26 +66,32 @@
                         case SettingsSection.Chat:
                             <MudStack Spacing="3">
                                 <MudText Typo="Typo.h6">Chat</MudText>
-                                <MudSwitch T="bool"
-                                           @bind-Value="_settings.Streaming"
-                                           Label="Streaming"
-                                           Color="Color.Primary" />
-                                <MudSwitch T="bool"
-                                           @bind-Value="_settings.ShowReasoning"
-                                           Label="Show reasoning"
-                                           Color="Color.Primary" />
-                                <MudSwitch T="bool"
-                                           @bind-Value="_settings.ShowTokens"
-                                           Label="Show tokens"
-                                           Color="Color.Primary" />
-                                <MudSwitch T="bool"
-                                           @bind-Value="_settings.ShowToolCalls"
-                                           Label="Show tool calls"
-                                           Color="Color.Primary" />
-                                <MudSwitch T="bool"
-                                           @bind-Value="_settings.ShowMemoryUpdate"
-                                           Label="Show memory updates"
-                                           Color="Color.Primary" />
+                                @if (ServerSettings.AllowChatVisualsCustomization)
+                                {
+                                    <MudSwitch T="bool"
+                                               @bind-Value="_settings.Streaming"
+                                               Label="Streaming"
+                                               Color="Color.Primary" />
+                                    <MudSwitch T="bool"
+                                               @bind-Value="_settings.ShowReasoning"
+                                               Label="Show reasoning"
+                                               Color="Color.Primary" />
+                                    <MudSwitch T="bool"
+                                               @bind-Value="_settings.ShowTokens"
+                                               Label="Show tokens"
+                                               Color="Color.Primary" />
+                                    <MudSwitch T="bool"
+                                               @bind-Value="_settings.ShowToolCalls"
+                                               Label="Show tool calls"
+                                               Color="Color.Primary" />
+                                    @if (ServerSettings.UseUserMemory)
+                                    {
+                                        <MudSwitch T="bool"
+                                                   @bind-Value="_settings.ShowMemoryUpdate"
+                                                   Label="Show memory updates"
+                                                   Color="Color.Primary" />
+                                    }
+                                }
                                 <MudButton Variant="Variant.Filled"
                                            Color="Color.Primary"
                                            StartIcon="@Icons.Material.Filled.Save"

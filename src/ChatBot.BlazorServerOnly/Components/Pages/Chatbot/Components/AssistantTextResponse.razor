@@ -1,11 +1,11 @@
-﻿@using ServiceDefaults.Models
+@using ServiceDefaults.Models
 @if (!string.IsNullOrWhiteSpace(Message.Text))
 {
     <article class="message-row from-assistant">
         <div class="message-bubble">
             <div class="message-text markdown-content">@RenderedMarkdown</div>
 
-            @if (Settings.ShowTokens && Message.Usage != null)
+            @if (ShowTokens && Message.Usage != null)
             {
                 <div class="token-usage" aria-label="Token usage">
                     <span>@Message.Usage.InputTokenCount in</span>
@@ -25,10 +25,10 @@
     private MarkdownPipeline MarkdownPipeline { get; set; } = default!;
 
     [Parameter, EditorRequired]
-    public Settings Settings { get; set; }
-    
-    [Parameter, EditorRequired]
     public ConversationMessage Message { get; set; }
+
+    [Parameter]
+    public bool ShowTokens { get; set; }
 
     private MarkupString RenderedMarkdown => new(Markdown.ToHtml(Message.Text, MarkdownPipeline));
 }

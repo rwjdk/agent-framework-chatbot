@@ -1,13 +1,14 @@
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 
 [UsedImplicitly]
-public partial class LeftSidebar(ConversationsService conversationsService, IDialogService dialogService)
+public partial class LeftSidebar(IConversationsService conversationsService, IDialogService dialogService)
 {
     private List<Conversation> _conversations = [];
     private Guid? _openConversationMenuId;

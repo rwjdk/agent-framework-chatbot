@@ -1,9 +1,10 @@
 using Microsoft.Extensions.AI;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 
 namespace ServiceDefaults.Services;
 
-public class ConversationChatMessageMapper(BlobStorageService blobStorageService)
+public class ConversationChatMessageMapper(Interfaces.IStorageService storageService)
 {
     public async Task<List<ChatMessage>> ToChatMessagesAsync(Conversation conversation)
     {
@@ -23,7 +24,7 @@ public class ConversationChatMessageMapper(BlobStorageService blobStorageService
             List<AIContent> contents = [new TextContent(message.Text)];
             foreach (ConversationAttachment attachment in message.Attachments)
             {
-                contents.Add(await blobStorageService.CreateDataContentAsync(attachment));
+                contents.Add(await storageService.CreateDataContentAsync(attachment));
             }
 
             return new ChatMessage(ChatRole.User, contents);

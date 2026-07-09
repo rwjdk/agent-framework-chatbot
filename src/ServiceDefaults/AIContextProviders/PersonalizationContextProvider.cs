@@ -1,5 +1,6 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
 
@@ -8,7 +9,7 @@ namespace ServiceDefaults.AIContextProviders;
 internal class PersonalizationContextProvider(
     AgentService agentService,
     string userId,
-    SettingsService settingsService,
+    ISettingsService settingsService,
     Func<MemoryUpdate, Task> memoryUpdateNotification) : AIContextProvider
 {
     protected override async ValueTask<AIContext> ProvideAIContextAsync(InvokingContext context, CancellationToken cancellationToken = default)
@@ -16,11 +17,6 @@ internal class PersonalizationContextProvider(
         Settings settings = await settingsService.LoadAsync(userId);
 
         string? instructions = null;
-        if (!string.IsNullOrWhiteSpace(settings.Instructions))
-        {
-            instructions += $"<personal_instructions>{settings.Instructions}</personal_instructions>";
-        }
-
         if (settings.UserMemories.Count > 0)
         {
             IEnumerable<string> memories = settings.UserMemories.Select(x => $"<memory>{x}</memory>");
@@ -37,8 +33,6 @@ internal class PersonalizationContextProvider(
     {
         Settings settings = await settingsService.LoadAsync(userId);
 
-        //Todo - Fix that system save too much in memory! (aka example image gen requests or just saying hi)
-
         ChatMessage lastMessageFromUser = context.RequestMessages.Last();
         List<ChatMessage> inputToMemoryExtractor =
         [
@@ -47,20 +41,27 @@ internal class PersonalizationContextProvider(
         ];
 
         MemoryUpdate memoryUpdate = await agentService.GetMemoryUpdatesAsync(inputToMemoryExtractor);
-        if (memoryUpdate.MemoryToAdd.Count > 0 || memoryUpdate.MemoryToRemove.Count > 0)
+        if (memoryUpdate.MemoryToAdd?.Count > 0 || memoryUpdate.MemoryToRemove?.Count > 0)
         {
-            foreach (string memoryToRemove in memoryUpdate.MemoryToRemove)
+            if (memoryUpdate.MemoryToRemove != null)
             {
-                settings.UserMemories.Remove(memoryToRemove);
-            }
-
-            foreach (string newMemory in memoryUpdate.MemoryToAdd)
-            {
-                if (!settings.UserMemories.Contains(newMemory))
+                foreach (string memoryToRemove in memoryUpdate.MemoryToRemove)
                 {
-                    settings.UserMemories.Add(newMemory);
+                    settings.UserMemories.Remove(memoryToRemove);
                 }
             }
+
+            if (memoryUpdate.MemoryToAdd != null)
+            {
+                foreach (string newMemory in memoryUpdate.MemoryToAdd)
+                {
+                    if (!settings.UserMemories.Contains(newMemory))
+                    {
+                        settings.UserMemories.Add(newMemory);
+                    }
+                }
+            }
+
             await settingsService.SaveAsync(settings);
 
             await memoryUpdateNotification.Invoke(memoryUpdate);

@@ -2,11 +2,12 @@ using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Azure.Cosmos;
 using ServiceDefaults.Constants;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 
 namespace ServiceDefaults.Services;
 
-public class SettingsService(CosmosClient cosmosClient)
+public class CosmosDbSettingsService(CosmosClient cosmosClient) : ISettingsService
 {
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private Container? _container;

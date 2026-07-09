@@ -1,20 +1,20 @@
 ﻿@using ChatBot.BlazorServerOnly.Models
 @using ServiceDefaults.Models
-@if (Settings.Streaming)
+@if (UseStreaming)
 {
     if (IsWaitingForAssistant && !HasStreamedVisuals)
     {
         <AssistantProgress />
     }
 
-    if (Settings.ShowReasoning && VisualState.StreamedReasoning != null)
+    if (ShowReasoning && VisualState.StreamedReasoning != null)
     {
         <article class="message-row from-assistant">
             <div class="meta-info markdown-content">@RenderedStreamedReasoning</div>
         </article>
     }
 
-    if (Settings.ShowToolCalls)
+    if (ShowToolCalls)
     {
         <AssistantToolCallResponse Contents="VisualState.StreamedContents"/>
     }
@@ -41,6 +41,9 @@ else
     [Inject]
     private MarkdownPipeline MarkdownPipeline { get; set; } = default!;
 
+    [Inject]
+    private ServerSettings ServerSettings { get; set; } = default!;
+
     [Parameter, EditorRequired]
     public Settings Settings { get; set; }
 
@@ -54,7 +57,13 @@ else
 
     private bool IsWaitingForAssistant => Conversation.Messages.LastOrDefault()?.Role == ChatRole.User;
 
-    private bool HasStreamedVisuals => !string.IsNullOrWhiteSpace(VisualState.StreamedReasoning)
+    private bool UseStreaming => !ServerSettings.AllowChatVisualsCustomization || Settings.Streaming;
+
+    private bool ShowReasoning => ServerSettings.AllowChatVisualsCustomization && Settings.ShowReasoning;
+
+    private bool ShowToolCalls => ServerSettings.AllowChatVisualsCustomization && Settings.ShowToolCalls;
+
+    private bool HasStreamedVisuals => (ShowReasoning && !string.IsNullOrWhiteSpace(VisualState.StreamedReasoning))
                                       || !string.IsNullOrWhiteSpace(VisualState.StreamedResponse)
-                                      || VisualState.StreamedContents.Any();
+                                      || (ShowToolCalls && VisualState.StreamedContents.Any());
 }

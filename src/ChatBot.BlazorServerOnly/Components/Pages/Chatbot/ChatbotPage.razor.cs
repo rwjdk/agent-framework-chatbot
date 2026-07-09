@@ -1,6 +1,4 @@
-using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.Tools;
-using AgentFrameworkToolkit.Tools.Common;
 using AgentFrameworkToolkit.Tools.ModelContextProtocol;
 using ChatBot.BlazorServerOnly.Components.Pages.Chatbot.Components;
 using ChatBot.BlazorServerOnly.Models;
@@ -12,28 +10,26 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.AI;
 using Microsoft.JSInterop;
-using ModelContextProtocol.Client;
 using MudBlazor;
 using ServiceDefaults.Extensions;
+using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
-using ServiceDefaults.Tools;
 
 namespace ChatBot.BlazorServerOnly.Components.Pages.Chatbot;
 
 [UsedImplicitly]
 public partial class ChatbotPage(
-    AzureOpenAIAgentFactory azureOpenAIAgentFactory,
     AIToolsFactory aiToolsFactory,
-    ConversationsService conversationsService,
+    IConversationsService conversationsService,
     AgentService agentService,
-    SettingsService settingsService,
-    BlobStorageService blobStorageService,
+    ISettingsService settingsService,
+    IStorageService storageService,
     ConversationChatMessageMapper conversationChatMessageMapper,
     AuthenticationStateProvider authenticationStateProvider,
-    OpenWeatherMapOptions openWeatherMapOptions,
     IJSRuntime jsRuntime,
     IDialogService dialogService,
+    ServerSettings serverSettings,
     ISnackbar snackbar) : IAsyncDisposable
 {
     private readonly UserInput _userInput = new();
@@ -47,6 +43,12 @@ public partial class ChatbotPage(
     private IJSObjectReference? _audioRecorderModule;
     private IJSObjectReference? _scrollModule;
     private ElementReference _chatMessagesElement;
+    private ServerSettings ServerSettings => serverSettings;
+    private bool UseStreaming => !ServerSettings.AllowChatVisualsCustomization || _settings?.Streaming == true;
+    private bool ShowReasoning => ServerSettings.AllowChatVisualsCustomization && _settings?.ShowReasoning == true;
+    private bool ShowTokens => ServerSettings.AllowChatVisualsCustomization && _settings?.ShowTokens == true;
+    private bool ShowToolCalls => ServerSettings.AllowChatVisualsCustomization && _settings?.ShowToolCalls == true;
+    private bool ShowMemoryUpdate => ServerSettings.UseUserMemory && ServerSettings.AllowChatVisualsCustomization && _settings?.ShowMemoryUpdate == true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,9 +87,12 @@ public partial class ChatbotPage(
 
             //Attachments
             List<ConversationAttachment> attachments = [];
-            foreach (UserInputAttachment file in _userInput.Attachments)
+            if (ServerSettings.AllowFileAttachments)
             {
-                attachments.Add(await blobStorageService.SaveAsync(_userId, file.FileName, file.ContentType, file.Bytes));
+                foreach (UserInputAttachment file in _userInput.Attachments)
+                {
+                    attachments.Add(await storageService.SaveAttachmentAsync(_userId, file.FileName, file.ContentType, file.Bytes));
+                }
             }
 
             //Reset GUI so it is ready for new message
@@ -97,27 +102,21 @@ public partial class ChatbotPage(
             await InvokeAsync(StateHasChanged);
             await ScrollMessagesToBottomAsync();
 
-            //Prepare Regular Tools
-            List<AITool> tools =
-            [
-                WeatherTools.GetWeatherForCity(openWeatherMapOptions),
-                ..aiToolsFactory.GetTools(new ImageGenerationTool(azureOpenAIAgentFactory, _conversation, blobStorageService)),
-                ..TimeTools.All()
-            ];
-
-            //Prepare MCP Tools (and convert to regular tools)
-            foreach (McpServer mcpServer in _settings.McpServers)
+            //Prepare MCP Clients
+            if (ServerSettings.AllowMcpServers)
             {
-                McpClientTools mcpClientTool = await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers);
-                mcpClientTools.Add(mcpClientTool);
-                tools.AddRange(mcpClientTool.Tools);
+                foreach (McpServer mcpServer in _settings.McpServers)
+                {
+                    McpClientTools mcpClientTool = await aiToolsFactory.GetToolsFromRemoteMcpAsync(mcpServer.Url, mcpServer.Headers);
+                    mcpClientTools.Add(mcpClientTool);
+                }
             }
 
             //LLM Work
-            AIAgent agent = agentService.GetMainAgent(_userId, tools, _settings.Instructions, MemoryUpdateNotificationAsync); //todo... own more of tool-generation?
+            AIAgent agent = agentService.GetMainAgent(_userId, mcpClientTools, _conversation, _settings.Instructions, MemoryUpdateNotificationAsync);
             List<ChatMessage> chatMessagesToSend = await conversationChatMessageMapper.ToChatMessagesAsync(_conversation);
             AgentResponse response;
-            if (_settings.Streaming)
+            if (UseStreaming)
             {
                 List<AgentResponseUpdate> updates = [];
                 await foreach (AgentResponseUpdate update in agent.RunStreamingAsync(chatMessagesToSend))
@@ -172,15 +171,20 @@ public partial class ChatbotPage(
 
     private async Task MemoryUpdateNotificationAsync(MemoryUpdate obj)
     {
+        if (!ServerSettings.UseUserMemory)
+        {
+            return;
+        }
+
         _visualState.MemoryUpdate = obj;
         if (_settings is not null)
         {
-            foreach (string memoryToRemove in obj.MemoryToRemove)
+            foreach (string memoryToRemove in obj.MemoryToRemove ?? [])
             {
                 _settings.UserMemories.Remove(memoryToRemove);
             }
 
-            foreach (string memoryToAdd in obj.MemoryToAdd.Where(x => !_settings.UserMemories.Contains(x)))
+            foreach (string memoryToAdd in obj.MemoryToAdd?.Where(x => !_settings.UserMemories.Contains(x)) ?? [])
             {
                 _settings.UserMemories.Add(memoryToAdd);
             }
@@ -280,6 +284,12 @@ public partial class ChatbotPage(
 
     private async Task SelectFilesAsync(InputFileChangeEventArgs args)
     {
+        if (!ServerSettings.AllowFileAttachments)
+        {
+            _userInput.Attachments = [];
+            return;
+        }
+
         List<UserInputAttachment> attachments = [];
         foreach (IBrowserFile file in args.GetMultipleFiles().Where(x => x.ContentType == "application/pdf" || x.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)))
         {
@@ -301,7 +311,7 @@ public partial class ChatbotPage(
 
     private async Task ToggleRecordingAsync()
     {
-        if (_visualState.IsSendingMessage)
+        if (_visualState.IsSendingMessage || !ServerSettings.AllowAudioTranscription)
         {
             return;
         }
