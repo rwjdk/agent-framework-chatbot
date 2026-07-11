@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Aspire.Hosting.JavaScript;
 using Projects;
 using ServiceDefaults.Constants;
 using ServiceDefaults.Models;
@@ -70,6 +71,35 @@ builder.AddProject<ChatBot_BlazorServerOnly>("blazor-server-only")
     .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowChatVisualsCustomization)}", serverSettings.AllowChatVisualsCustomization.ToString())
     .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowFileAttachments)}", serverSettings.AllowFileAttachments.ToString())
     .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowAudioTranscription)}", serverSettings.AllowAudioTranscription.ToString());
+
+IResourceBuilder<ProjectResource> api = builder.AddProject<ChatBot_Api>("chatbot-api")
+    .WithEnvironment(SecretKeys.WeatherServiceKey, weatherServiceKey)
+    .WithEnvironment(SecretKeys.AzureOpenAIEndpoint, azureOpenAiEndpoint)
+    .WithEnvironment(SecretKeys.AzureOpenAIKey, azureOpenAiKey)
+    .WithEnvironment(SecretKeys.CosmosDbConnectionString, cosmosDbConnectionString)
+    .WithEnvironment(SecretKeys.BlobStorageConnectionString, blobStorageConnectionString)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0Domain), auth0Domain)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0ClientId), auth0ClientId)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0ClientSecret), auth0ClientSecret)
+    .WithEnvironment(ToEnvironmentVariableName(SecretKeys.Auth0CallbackPath), "/api/auth/callback/auth0")
+    .WithEnvironment(ToAzureAdEnvironmentVariableName(SecretKeys.EntraIdInstance), entraIdInstance)
+    .WithEnvironment(ToAzureAdEnvironmentVariableName(SecretKeys.EntraIdTenantId), entraIdTenantId)
+    .WithEnvironment(ToAzureAdEnvironmentVariableName(SecretKeys.EntraIdClientId), entraIdClientId)
+    .WithEnvironment(ToAzureAdEnvironmentVariableName(SecretKeys.EntraIdCallbackPath), "/api/auth/callback/entra")
+    .WithEnvironment(ToAzureAdEnvironmentVariableName(SecretKeys.EntraIdSignedOutCallbackPath), "/api/auth/signout-callback-oidc")
+    .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.UseImageGeneration)}", serverSettings.UseImageGeneration.ToString())
+    .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.UseUserMemory)}", serverSettings.UseUserMemory.ToString())
+    .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowMcpServers)}", serverSettings.AllowMcpServers.ToString())
+    .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowCustomInstructions)}", serverSettings.AllowCustomInstructions.ToString())
+    .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowChatVisualsCustomization)}", serverSettings.AllowChatVisualsCustomization.ToString())
+    .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowFileAttachments)}", serverSettings.AllowFileAttachments.ToString())
+    .WithEnvironment($"{nameof(ServerSettings)}__{nameof(ServerSettings.AllowAudioTranscription)}", serverSettings.AllowAudioTranscription.ToString());
+
+IResourceBuilder<ViteAppResource> react = builder.AddViteApp("react-frontend", "../ChatBot.React")
+    .WithEndpoint("http", endpoint => endpoint.Port = 5173)
+    .WithReference(api)
+    .WaitFor(api)
+    .PublishAsStaticWebsite("/api", api);
 
 builder.Build().Run();
 

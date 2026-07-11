@@ -68,22 +68,25 @@ public class FileStorageService : IStorageService
 
     private async Task<StoredFile?> RetrieveAsync(string path)
     {
-        byte[] bytes = await File.ReadAllBytesAsync(path);
-        try
-        {
-            string extension = Path.GetExtension(path);
-            string contentType = extension switch
-            {
-                "png" => "image/png",
-                "pdf" => "application/pdf",
-                _ => "application/octet-stream"
-            };
-            return new StoredFile(bytes, contentType);
-        }
-        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        if (!File.Exists(path))
         {
             return null;
         }
+
+        byte[] bytes = await File.ReadAllBytesAsync(path);
+        string extension = Path.GetExtension(path);
+        string contentType = extension.ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            ".svg" => "image/svg+xml",
+            ".pdf" => "application/pdf",
+            _ => "application/octet-stream"
+        };
+        return new StoredFile(bytes, contentType);
     }
 
     private static string GetAttachmentPath(string userId, string fileName)

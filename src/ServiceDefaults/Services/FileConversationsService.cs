@@ -20,6 +20,18 @@ public class FileConversationsService : IConversationsService
         return conversations;
     }
 
+    public async Task<Conversation?> LoadConversationAsync(string userId, Guid conversationId)
+    {
+        string path = GetConversationPath(userId, conversationId);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        string json = await File.ReadAllTextAsync(path);
+        return JsonSerializer.Deserialize<Conversation>(json);
+    }
+
     public async Task StoreConversationAsync(Conversation conversation)
     {
         string path = GetConversationPath(conversation.UserId, conversation.Id);
@@ -42,7 +54,7 @@ public class FileConversationsService : IConversationsService
         string folder = GetConversationFolder(userId);
         if (Directory.Exists(folder))
         {
-            Directory.Delete(folder);
+            Directory.Delete(folder, recursive: true);
         }
         return Task.CompletedTask;
     }

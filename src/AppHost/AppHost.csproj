@@ -1,4 +1,4 @@
-﻿<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -6,12 +6,15 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>$(NoWarn);ASPIREJAVASCRIPT001</NoWarn>
 		<UserSecretsId>c538635b-ba7d-4bd5-87de-bcb41145f504</UserSecretsId>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.JavaScript" Version="13.4.6" />
+		<ProjectReference Include="..\ChatBot.Api\ChatBot.Api.csproj" />
 		<ProjectReference Include="..\ChatBot.BlazorServerOnly\ChatBot.BlazorServerOnly.csproj" />
-		<ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" IsAspireProjectResource="false"/>
+		<ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" IsAspireProjectResource="false" />
 	</ItemGroup>
 
 </Project>

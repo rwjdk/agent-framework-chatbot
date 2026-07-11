@@ -5,6 +5,7 @@ namespace ServiceDefaults.Interfaces;
 public interface IConversationsService
 {
     Task<List<Conversation>> LoadPreviousConversationsAsync(string userId);
+    Task<Conversation?> LoadConversationAsync(string userId, Guid conversationId);
     Task StoreConversationAsync(Conversation conversation);
     Task DeleteConversationAsync(string userId, Guid conversationId);
     Task DeleteUserConversationsAsync(string userId);

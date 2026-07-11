@@ -36,6 +36,20 @@ public class CosmosDbConversationsService(CosmosClient cosmosClient) : IConversa
         return conversations;
     }
 
+    public async Task<Conversation?> LoadConversationAsync(string userId, Guid conversationId)
+    {
+        Container container = await GetContainerAsync();
+        try
+        {
+            ItemResponse<Conversation> response = await container.ReadItemAsync<Conversation>(conversationId.ToString(), new PartitionKey(userId));
+            return response.Resource;
+        }
+        catch (CosmosException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
     public async Task StoreConversationAsync(Conversation conversation)
     {
         Container container = await GetContainerAsync();
