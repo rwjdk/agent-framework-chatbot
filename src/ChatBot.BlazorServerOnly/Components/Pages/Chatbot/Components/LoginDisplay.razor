@@ -1,5 +1,6 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@using ChatBot.BlazorServerOnly.Authentication.Login
 
 <AuthorizeView>
     <Authorized>
@@ -8,14 +9,17 @@
                 <MudText Typo="Typo.caption" Class="login-display-label">Signed in as</MudText>
                 <MudText Typo="Typo.body2" Class="login-display-name">@context.User.Identity?.Name</MudText>
             </MudStack>
-            <MudTooltip Text="Logout">
-                <MudIconButton Class="logout-button"
-                               Icon="@Icons.Material.Filled.Logout"
-                               Color="Color.Default"
-                               Size="Size.Small"
-                               ButtonType="ButtonType.Button"
-                               OnClick="ConfirmLogoutAsync" />
-            </MudTooltip>
+            @if (context.User.FindFirst(LoginAuthenticationConstants.AuthenticationSchemeClaimType)?.Value != LoginAuthenticationConstants.GuestAuthenticationScheme)
+            {
+                <MudTooltip Text="Logout">
+                    <MudIconButton Class="logout-button"
+                                   Icon="@Icons.Material.Filled.Logout"
+                                   Color="Color.Default"
+                                   Size="Size.Small"
+                                   ButtonType="ButtonType.Button"
+                                   OnClick="ConfirmLogoutAsync" />
+                </MudTooltip>
+            }
         </MudStack>
     </Authorized>
 </AuthorizeView>

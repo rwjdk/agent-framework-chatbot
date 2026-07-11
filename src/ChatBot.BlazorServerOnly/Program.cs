@@ -4,6 +4,7 @@ using ChatBot.BlazorServerOnly.Authentication.EntraId;
 using ChatBot.BlazorServerOnly.Authentication.Login;
 using ChatBot.BlazorServerOnly.Components;
 using Markdig;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using MudBlazor.Services;
@@ -29,6 +30,7 @@ builder.Services
         options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
         options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     })
+    .AddCookie()
     .AddAuth0Authentication(builder.Configuration)
     .AddEntraIdAuthentication(builder.Configuration);
 List<LoginProvider> loginProviders =
@@ -36,10 +38,7 @@ List<LoginProvider> loginProviders =
     new("Auth0", "/login/auth0", Auth0AuthenticationExtensions.AuthenticationScheme, builder.Configuration.IsAuth0AuthenticationEnabled()),
     new("Entra ID", "/login/entra", EntraIdAuthenticationExtensions.AuthenticationScheme, builder.Configuration.IsEntraIdAuthenticationEnabled())
 ];
-if (!loginProviders.Any(loginProvider => loginProvider.IsEnabled))
-{
-    throw new InvalidOperationException("At least one login provider must be enabled. Set Auth0-ClientId or EntraId-ClientId to a real value instead of 'None'.");
-}
+bool isGuestMode = !loginProviders.Any(loginProvider => loginProvider.IsEnabled);
 
 builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
@@ -52,6 +51,15 @@ builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefa
         context.Properties.ExpiresUtc = DateTimeOffset.UtcNow.Add(options.ExpireTimeSpan);
 
         return Task.CompletedTask;
+    };
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        bool isGuest = context.Principal?.FindFirst(LoginAuthenticationConstants.AuthenticationSchemeClaimType)?.Value == LoginAuthenticationConstants.GuestAuthenticationScheme;
+        if (isGuest != isGuestMode)
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        }
     };
 });
 builder.Services.AddAuthorizationBuilder()
