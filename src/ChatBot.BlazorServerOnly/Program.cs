@@ -23,20 +23,26 @@ builder.Services.AddSingleton(new MarkdownPipelineBuilder()
     .Build());
 
 //Auth (Start)
-builder.Services
-    .AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    })
-    .AddCookie()
+bool isAuth0AuthenticationEnabled = builder.Configuration.IsAuth0AuthenticationEnabled();
+bool isEntraIdAuthenticationEnabled = builder.Configuration.IsEntraIdAuthenticationEnabled();
+AuthenticationBuilder authenticationBuilder = builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+});
+if (!isEntraIdAuthenticationEnabled)
+{
+    authenticationBuilder.AddCookie();
+}
+
+authenticationBuilder
     .AddAuth0Authentication(builder.Configuration)
     .AddEntraIdAuthentication(builder.Configuration);
 List<LoginProvider> loginProviders =
 [
-    new("Auth0", "/login/auth0", Auth0AuthenticationExtensions.AuthenticationScheme, builder.Configuration.IsAuth0AuthenticationEnabled()),
-    new("Entra ID", "/login/entra", EntraIdAuthenticationExtensions.AuthenticationScheme, builder.Configuration.IsEntraIdAuthenticationEnabled())
+    new("Auth0", "/login/auth0", Auth0AuthenticationExtensions.AuthenticationScheme, isAuth0AuthenticationEnabled),
+    new("Entra ID", "/login/entra", EntraIdAuthenticationExtensions.AuthenticationScheme, isEntraIdAuthenticationEnabled)
 ];
 bool isGuestMode = !loginProviders.Any(loginProvider => loginProvider.IsEnabled);
 
