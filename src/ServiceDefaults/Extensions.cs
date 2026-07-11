@@ -15,6 +15,7 @@ using ServiceDefaults.Constants;
 using ServiceDefaults.Interfaces;
 using ServiceDefaults.Models;
 using ServiceDefaults.Services;
+using System.Text.Json;
 
 #pragma warning disable IDE0130
 // ReSharper disable once CheckNamespace
@@ -55,7 +56,11 @@ public static class Extensions
             }
             else
             {
-                builder.Services.AddSingleton(new CosmosClient(cosmosDbConnectionString));
+                CosmosClientOptions cosmosClientOptions = new()
+                {
+                    UseSystemTextJsonSerializerWithOptions = new JsonSerializerOptions()
+                };
+                builder.Services.AddSingleton(new CosmosClient(cosmosDbConnectionString, cosmosClientOptions));
                 builder.Services.AddSingleton<IConversationsService, CosmosDbConversationsService>();
                 builder.Services.AddSingleton<ISettingsService, CosmosDbSettingsService>();
             }

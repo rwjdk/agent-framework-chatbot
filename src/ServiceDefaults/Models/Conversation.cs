@@ -1,7 +1,7 @@
 using JetBrains.Annotations;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace ServiceDefaults.Models;
 
@@ -18,10 +18,10 @@ public class Conversation
 
     public List<ConversationMessage> Messages { get; [UsedImplicitly] init; } = [];
 
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public required Guid Id { get; init; }
 
-    [JsonProperty("userId")]
+    [JsonPropertyName("userId")]
     public string UserId { get; init; } = string.Empty;
     public string? Title { get; set; }
 

@@ -1,5 +1,5 @@
 using JetBrains.Annotations;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace ServiceDefaults.Models;
 
@@ -22,11 +22,11 @@ public class Settings
         };
     }
 
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     [UsedImplicitly]
     public string Id => UserId;
 
-    [JsonProperty("userId")]
+    [JsonPropertyName("userId")]
     public required string UserId { get; init; }
 
     //Chat
