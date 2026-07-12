@@ -49,6 +49,7 @@ ServerSettings serverSettings = builder.Configuration
     .Get<ServerSettings>() ?? throw new InvalidOperationException($"{nameof(ServerSettings)} configuration is missing.");
 
 builder.AddProject<ChatBot_BlazorServerOnly>("blazor-server-only")
+    .WithExternalHttpEndpoints()
     .WithEnvironment(SecretKeys.WeatherServiceKey, weatherServiceKey)
     .WithEnvironment(SecretKeys.AzureOpenAIEndpoint, azureOpenAiEndpoint)
     .WithEnvironment(SecretKeys.AzureOpenAIKey, azureOpenAiKey)
