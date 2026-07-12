@@ -114,7 +114,7 @@ public static class Extensions
     private static ServerSettings ReadServerSettings(IConfiguration configuration)
     {
         return configuration
-            .GetRequiredSection(nameof(ServerSettings))
+            .GetRequiredSection(ServerSettings.SectionName)
             .Get<ServerSettings>() ?? throw new InvalidOperationException($"{nameof(ServerSettings)} configuration is missing.");
     }
 

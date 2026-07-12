@@ -1,7 +1,12 @@
-﻿namespace ServiceDefaults.Models;
+﻿using JetBrains.Annotations;
 
-public class ServerSettings
+namespace ServiceDefaults.Models;
+
+[PublicAPI]
+public class ServerSettings : ISectionSettings
 {
+    public static string SectionName => "Settings";
+
     public required bool UseImageGeneration { get; set; }
     public required bool UseUserMemory { get; set; }
     public required bool AllowMcpServers { get; set; }

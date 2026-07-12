@@ -2,6 +2,7 @@ using ChatBot.BlazorServerOnly.Authentication.Login;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
+using ServiceDefaults.Models;
 
 namespace ChatBot.BlazorServerOnly.Authentication.EntraId;
 
@@ -11,7 +12,7 @@ internal static class EntraIdAuthenticationExtensions
 
     public static bool IsEntraIdAuthenticationEnabled(this IConfiguration configuration)
     {
-        return IsClientIdEnabled(configuration["AzureAd:ClientId"]);
+        return IsClientIdEnabled(configuration[$"{EntraIdSettings.SectionName}:{nameof(EntraIdSettings.ClientId)}"]);
     }
 
     public static AuthenticationBuilder AddEntraIdAuthentication(this AuthenticationBuilder authenticationBuilder, IConfiguration configuration)
@@ -21,7 +22,7 @@ internal static class EntraIdAuthenticationExtensions
             return authenticationBuilder;
         }
 
-        authenticationBuilder.AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"), AuthenticationScheme);
+        authenticationBuilder.AddMicrosoftIdentityWebApp(configuration.GetSection(EntraIdSettings.SectionName), AuthenticationScheme);
         authenticationBuilder.Services.PostConfigure<OpenIdConnectOptions>(AuthenticationScheme, options =>
         {
             Func<TokenValidatedContext, Task> existingTokenValidated = options.Events.OnTokenValidated;

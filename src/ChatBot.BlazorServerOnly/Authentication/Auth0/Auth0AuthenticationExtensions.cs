@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using ServiceDefaults.Models;
 
 namespace ChatBot.BlazorServerOnly.Authentication.Auth0;
 
@@ -12,7 +13,7 @@ internal static class Auth0AuthenticationExtensions
 
     public static bool IsAuth0AuthenticationEnabled(this IConfiguration configuration)
     {
-        return IsClientIdEnabled(configuration["Auth0:ClientId"]);
+        return IsClientIdEnabled(configuration[GetConfigurationKey(nameof(Auth0Settings.ClientId))]);
     }
 
     public static AuthenticationBuilder AddAuth0Authentication(this AuthenticationBuilder authenticationBuilder, IConfiguration configuration)
@@ -23,9 +24,9 @@ internal static class Auth0AuthenticationExtensions
         }
 
         string authority = GetAuthority(configuration);
-        string clientId = GetRequiredConfigurationValue(configuration, "Auth0:ClientId");
-        string clientSecret = GetRequiredConfigurationValue(configuration, "Auth0:ClientSecret");
-        PathString callbackPath = new(GetRequiredConfigurationValue(configuration, "Auth0:CallbackPath"));
+        string clientId = GetRequiredConfigurationValue(configuration, GetConfigurationKey(nameof(Auth0Settings.ClientId)));
+        string clientSecret = GetRequiredConfigurationValue(configuration, GetConfigurationKey(nameof(Auth0Settings.ClientSecret)));
+        PathString callbackPath = new(GetRequiredConfigurationValue(configuration, GetConfigurationKey(nameof(Auth0Settings.CallbackPath))));
 
         authenticationBuilder.AddOpenIdConnect(AuthenticationScheme, options =>
         {
@@ -86,13 +87,18 @@ internal static class Auth0AuthenticationExtensions
 
     private static string GetAuthority(IConfiguration configuration)
     {
-        string domain = GetRequiredConfigurationValue(configuration, "Auth0:Domain").Trim().TrimEnd('/');
+        string domain = GetRequiredConfigurationValue(configuration, GetConfigurationKey(nameof(Auth0Settings.Domain))).Trim().TrimEnd('/');
         if (!domain.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             domain = $"https://{domain}";
         }
 
         return domain;
+    }
+
+    private static string GetConfigurationKey(string propertyName)
+    {
+        return $"{Auth0Settings.SectionName}:{propertyName}";
     }
 
     private static string GetRequiredConfigurationValue(IConfiguration configuration, string key)
