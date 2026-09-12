@@ -1,7 +1,6 @@
 ﻿using AgentFrameworkToolkit.AzureOpenAI;
 using AgentFrameworkToolkit.OpenAI;
 using AgentFrameworkToolkit.Tools.ModelContextProtocol;
-using Azure.AI.OpenAI;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using OpenAI.Audio;
@@ -13,6 +12,7 @@ using System.ClientModel;
 using AgentFrameworkToolkit.Tools;
 using AgentFrameworkToolkit.Tools.Common;
 using Microsoft.Extensions.Configuration;
+using OpenAI;
 using ServiceDefaults.Tools;
 
 namespace ServiceDefaults.Services;
@@ -120,7 +120,7 @@ public class AgentService(
             throw new InvalidOperationException("Audio transcription is disabled by server settings.");
         }
 
-        AzureOpenAIClient client = azureOpenAIAgentFactory.Connection.GetClient();
+        OpenAIClient client = azureOpenAIAgentFactory.Connection.GetClient();
         AudioClient audioClient = client.GetAudioClient(AIModelIds.TranscribeModel);
         ClientResult<AudioTranscription> audioTranscription = await audioClient.TranscribeAudioAsync(
             audioStream,
