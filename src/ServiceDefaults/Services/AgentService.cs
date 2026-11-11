@@ -30,17 +30,18 @@ public class AgentService(
         AIAgent agent = azureOpenAIAgentFactory.CreateAgent(new AgentOptions
         {
             Model = AIModelIds.TitleGenerationModel,
+            ClientType = ClientType.ResponsesApi,
             Instructions = "You are a conversation title generator"
         });
 
         string message = $"""
-                           Given the following first chat message in a conversation: 
+                           Given the following first chat message in a conversation:
                            <message>{firstChatMessage}</message>
                            Generate a title that represent the what the conversation is about (Max 25 char long)
                            """;
-        
+
         AgentResponse<string> response = await agent.RunAsync<string>(message);
-        
+
         return response.Result;
     }
 
@@ -54,6 +55,7 @@ public class AgentService(
         AzureOpenAIAgent agent = azureOpenAIAgentFactory.CreateAgent(new AgentOptions
         {
             Model = AIModelIds.MemoryModel,
+            ClientType = ClientType.ResponsesApi,
             ReasoningEffort = OpenAIReasoningEffort.Low,
             Instructions = """
                            Your job is to extract facts about the user that is not yet known:
