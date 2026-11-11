@@ -26,7 +26,6 @@ public partial class ChatbotPage(
     ISettingsService settingsService,
     IStorageService storageService,
     ConversationChatMessageMapper conversationChatMessageMapper,
-    AuthenticationStateProvider authenticationStateProvider,
     IJSRuntime jsRuntime,
     IDialogService dialogService,
     ServerSettings serverSettings,
@@ -37,6 +36,9 @@ public partial class ChatbotPage(
     private string _userId = string.Empty;
     private Conversation _conversation = Conversation.NewConversation(string.Empty);
     private Settings? _settings;
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
     //Components
     private LeftSidebar? _leftSidebar;
@@ -50,10 +52,16 @@ public partial class ChatbotPage(
     private bool ShowToolCalls => ServerSettings.AllowChatVisualsCustomization && _settings?.ShowToolCalls == true;
     private bool ShowMemoryUpdate => ServerSettings.UseUserMemory && ServerSettings.AllowChatVisualsCustomization && _settings?.ShowMemoryUpdate == true;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        AuthenticationState authenticationState = await authenticationStateProvider.GetAuthenticationStateAsync();
-        _userId = authenticationState.User.GetUserId();
+        AuthenticationState authenticationState = await AuthenticationStateTask;
+        string userId = authenticationState.User.GetUserId();
+        if (_settings is not null && _userId == userId)
+        {
+            return;
+        }
+
+        _userId = userId;
         _settings = await settingsService.LoadAsync(_userId);
         _conversation = Conversation.NewConversation(_userId);
     }
@@ -316,48 +324,63 @@ public partial class ChatbotPage(
             return;
         }
 
-        _audioRecorderModule ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", "/chatbotAudioRecorder.js");
-
-        if (!_visualState.IsRecordingAudio)
+        try
         {
-            //Start Recording
-            await _audioRecorderModule.InvokeVoidAsync("startRecording");
-            _visualState.IsRecordingAudio = true;
+            _audioRecorderModule ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", "/chatbotAudioRecorder.js");
+
+            if (!_visualState.IsRecordingAudio)
+            {
+                //Start Recording
+                await _audioRecorderModule.InvokeVoidAsync("startRecording");
+                _visualState.IsRecordingAudio = true;
+            }
+            else
+            {
+                //Stop Recording (and transcribe)
+                _visualState.IsTranscribingAudio = true;
+                try
+                {
+                    RecordedAudio? recordedAudio = await _audioRecorderModule.InvokeAsync<RecordedAudio?>("stopRecording");
+                    _visualState.IsRecordingAudio = false;
+
+                    if (recordedAudio is null)
+                    {
+                    }
+                    else
+                    {
+                        IJSStreamReference audioStreamReference = await _audioRecorderModule.InvokeAsync<IJSStreamReference>("getRecordedAudioStream");
+                        await using Stream audioStream = await audioStreamReference.OpenReadStreamAsync();
+
+                        string transcription = await agentService.GenerateTranscriptionAsync(audioStream, recordedAudio.FileName);
+
+                        _userInput.Text = string.IsNullOrWhiteSpace(_userInput.Text) ? transcription : $"{_userInput.Text.TrimEnd()} {transcription}";
+                    }
+                }
+                finally
+                {
+                    _visualState.IsRecordingAudio = false;
+                    _visualState.IsTranscribingAudio = false;
+                }
+            }
         }
-        else
+        catch (JSDisconnectedException)
         {
-            //Stop Recording (and transcribe)
-            _visualState.IsTranscribingAudio = true;
-            try
-            {
-                RecordedAudio? recordedAudio = await _audioRecorderModule.InvokeAsync<RecordedAudio?>("stopRecording");
-                _visualState.IsRecordingAudio = false;
-
-                if (recordedAudio is null)
-                {
-                }
-                else
-                {
-                    IJSStreamReference audioStreamReference = await _audioRecorderModule.InvokeAsync<IJSStreamReference>("getRecordedAudioStream");
-                    await using Stream audioStream = await audioStreamReference.OpenReadStreamAsync();
-
-                    string transcription = await agentService.GenerateTranscriptionAsync(audioStream, recordedAudio.FileName);
-
-                    _userInput.Text = string.IsNullOrWhiteSpace(_userInput.Text) ? transcription : $"{_userInput.Text.TrimEnd()} {transcription}";
-                }
-            }
-            finally
-            {
-                _visualState.IsRecordingAudio = false;
-                _visualState.IsTranscribingAudio = false;
-            }
+            _visualState.IsRecordingAudio = false;
+            _visualState.IsTranscribingAudio = false;
         }
     }
 
     private async Task ScrollMessagesToBottomAsync()
     {
-        _scrollModule ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", "/chatbotScroll.js");
-        await _scrollModule.InvokeVoidAsync("scrollToBottom", _chatMessagesElement);
+        try
+        {
+            _scrollModule ??= await jsRuntime.InvokeAsync<IJSObjectReference>("import", "/chatbotScroll.js");
+            await _scrollModule.InvokeVoidAsync("scrollToBottom", _chatMessagesElement);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser disconnected while the response was being displayed.
+        }
     }
 
     public async ValueTask DisposeAsync()
